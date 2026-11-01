@@ -10,10 +10,16 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from analyser import get_ticker_metadata, run_full_analysis
-from database import Analysis, Price, SessionLocal, init_db, get_db
-from fetcher import fetch_price_history, save_price_history, load_all_ticker_metadata
+from database import Analysis, Price, Recommendation, SessionLocal, init_db, get_db
+from fetcher import (
+    fetch_price_history,
+    fetch_recommendations,
+    save_price_history,
+    save_recommendations,
+    load_all_ticker_metadata,
+)
 from scheduler import init_scheduler
-from schemas import PricePoint, StatusResponse, StockDetailResponse
+from schemas import PricePoint, RecommendationPeriod, StatusResponse, StockDetailResponse
 from tickers import TICKERS_BY_INDEX, TICKERS_BY_SECTOR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -53,6 +59,9 @@ def refresh_all_data() -> None:
                     continue
                 save_price_history(db, ticker, df)
                 fetch_success += 1
+                rec_df = fetch_recommendations(ticker)
+                if rec_df is not None and not rec_df.empty:
+                    save_recommendations(db, ticker, rec_df)
             analysis_success, analysis_total = run_full_analysis(db)
             app.state.last_updated = datetime.utcnow()
             logger.info(
@@ -178,10 +187,18 @@ def get_stock_detail(ticker: str, db: Session = Depends(get_db)):
 
     price_rows = db.query(Price).filter(Price.ticker == ticker).order_by(Price.date).all()
     prices = [PricePoint.from_orm(row) for row in price_rows]
+    recommendation_rows = (
+        db.query(Recommendation)
+        .filter(Recommendation.ticker == ticker)
+        .order_by(Recommendation.id)
+        .all()
+    )
+    recommendations = [RecommendationPeriod.from_orm(row) for row in recommendation_rows]
     return {
         "company": meta,
         "analysis": latest_analysis,
         "prices": prices,
+        "recommendations": recommendations,
     }
 
 

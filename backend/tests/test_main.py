@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import main
-from database import Analysis, Base, Price
+from database import Analysis, Base, Price, Recommendation
 
 
 def _make_analysis(ticker, signal, score=0.0, conviction="LOW", **overrides):
@@ -193,6 +193,32 @@ def test_get_stock_detail_found(client_env):
     assert body["company"]["ticker"] == "AAL.L"
     assert body["analysis"]["signal"] == "BUY"
     assert len(body["prices"]) == 1
+
+
+def test_get_stock_detail_includes_recommendations_in_order(client_env):
+    client, session = client_env
+    session.add(_make_analysis("AAL.L", "BUY", score=5.0))
+    session.add_all([
+        Recommendation(ticker="AAL.L", period="0m", strong_buy=6, buy=22, hold=14, sell=2, strong_sell=2),
+        Recommendation(ticker="AAL.L", period="-1m", strong_buy=6, buy=22, hold=16, sell=1, strong_sell=2),
+    ])
+    session.commit()
+
+    resp = client.get("/api/stock/AAL.L")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["recommendations"]) == 2
+    assert body["recommendations"][0]["period"] == "0m"
+    assert body["recommendations"][0]["strong_buy"] == 6
+
+
+def test_get_stock_detail_empty_recommendations_when_none_stored(client_env):
+    client, session = client_env
+    session.add(_make_analysis("AAL.L", "BUY", score=5.0))
+    session.commit()
+
+    resp = client.get("/api/stock/AAL.L")
+    assert resp.json()["recommendations"] == []
 
 
 def test_get_stock_detail_unknown_ticker_404(client_env):

@@ -8,11 +8,26 @@ import MACDChart from '../components/MACDChart'
 import VolumeChart from '../components/VolumeChart'
 import SignalBadge from '../components/SignalBadge'
 import VerdictPanel from '../components/VerdictPanel'
+import RecommendationsChart from '../components/RecommendationsChart'
 
 function formatPrice(value, ticker) {
   if (value == null) return '–'
   if (ticker?.endsWith('.L')) return `${Number(value).toFixed(0)}p`
   return Number(value).toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })
+}
+
+function consensusFromRecommendation(rec) {
+  if (!rec) return null
+  const total = rec.strong_buy + rec.buy + rec.hold + rec.sell + rec.strong_sell
+  if (!total) return null
+  const meanScore = (rec.strong_buy * 5 + rec.buy * 4 + rec.hold * 3 + rec.sell * 2 + rec.strong_sell * 1) / total
+  let label = 'Hold'
+  if (meanScore >= 4.5) label = 'Strong Buy'
+  else if (meanScore >= 3.5) label = 'Buy'
+  else if (meanScore >= 2.5) label = 'Hold'
+  else if (meanScore >= 1.5) label = 'Sell'
+  else label = 'Strong Sell'
+  return { label, meanScore, total }
 }
 
 const BackIcon = () => (
@@ -52,6 +67,7 @@ function StockDetail() {
   }, [ticker])
 
   const latestPrice = useMemo(() => stock?.prices?.[stock.prices.length - 1], [stock])
+  const consensus = useMemo(() => consensusFromRecommendation(stock?.recommendations?.[0]), [stock])
 
   if (loading) {
     return (
@@ -157,6 +173,26 @@ function StockDetail() {
           <VolumeChart data={stock.prices} />
         </div>
       </div>
+
+      {/* Analyst recommendations */}
+      {stock.recommendations?.length > 0 && (
+        <div className={panelClass}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className={`${sectionTitle} mb-0`}>Analyst Recommendations</h3>
+            {consensus && (
+              <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                <span>Consensus:</span>
+                <SignalBadge
+                  signal={consensus.meanScore >= 3.5 ? 'BUY' : consensus.meanScore <= 2.5 ? 'SELL' : 'HOLD'}
+                  conviction={consensus.label}
+                />
+                <span>({consensus.total} analysts)</span>
+              </div>
+            )}
+          </div>
+          <RecommendationsChart data={stock.recommendations} />
+        </div>
+      )}
 
       {/* 52-week + volatility metrics */}
       <section className="grid gap-4 xl:grid-cols-4">

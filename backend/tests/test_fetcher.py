@@ -1,8 +1,14 @@
 import pandas as pd
 import pytest
 
-from database import Price
-from fetcher import fetch_price_history, load_all_ticker_metadata, save_price_history
+from database import Price, Recommendation
+from fetcher import (
+    fetch_price_history,
+    fetch_recommendations,
+    load_all_ticker_metadata,
+    save_price_history,
+    save_recommendations,
+)
 from tickers import FTSE_TICKERS
 
 
@@ -76,6 +82,75 @@ def test_save_price_history_replaces_existing(db_session, sample_price_df):
     save_price_history(db_session, ticker, sample_price_df.iloc[:10])
     count = db_session.query(Price).filter(Price.ticker == ticker).count()
     assert count == 10
+
+
+def _make_recommendations_df():
+    return pd.DataFrame({
+        "period": ["0m", "-1m", "-2m", "-3m"],
+        "strongBuy": [6, 6, 7, 7],
+        "buy": [22, 22, 23, 25],
+        "hold": [14, 16, 15, 14],
+        "sell": [2, 1, 1, 1],
+        "strongSell": [2, 2, 2, 1],
+    })
+
+
+class _FakeTicker:
+    def __init__(self, recommendations):
+        self.recommendations = recommendations
+
+
+def test_fetch_recommendations_success(monkeypatch):
+    df = _make_recommendations_df()
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda ticker: _FakeTicker(df))
+    result = fetch_recommendations("AAPL")
+    assert result is not None
+    assert list(result.columns) == ["period", "strongBuy", "buy", "hold", "sell", "strongSell"]
+    assert len(result) == 4
+
+
+def test_fetch_recommendations_empty_returns_none(monkeypatch):
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda ticker: _FakeTicker(pd.DataFrame()))
+    assert fetch_recommendations("AAPL") is None
+
+
+def test_fetch_recommendations_none_returns_none(monkeypatch):
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda ticker: _FakeTicker(None))
+    assert fetch_recommendations("AAPL") is None
+
+
+def test_fetch_recommendations_unexpected_columns_returns_none(monkeypatch):
+    df = pd.DataFrame({"period": ["0m"], "foo": [1]})
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda ticker: _FakeTicker(df))
+    assert fetch_recommendations("AAPL") is None
+
+
+def test_fetch_recommendations_exception_returns_none(monkeypatch):
+    def boom(ticker):
+        raise RuntimeError("network down")
+    monkeypatch.setattr("fetcher.yf.Ticker", boom)
+    assert fetch_recommendations("AAPL") is None
+
+
+def test_save_recommendations_inserts_rows(db_session):
+    df = _make_recommendations_df()
+    save_recommendations(db_session, "AAPL", df)
+    rows = db_session.query(Recommendation).filter(Recommendation.ticker == "AAPL").all()
+    assert len(rows) == 4
+    latest = next(r for r in rows if r.period == "0m")
+    assert latest.strong_buy == 6
+    assert latest.buy == 22
+    assert latest.hold == 14
+    assert latest.sell == 2
+    assert latest.strong_sell == 2
+
+
+def test_save_recommendations_replaces_existing(db_session):
+    df = _make_recommendations_df()
+    save_recommendations(db_session, "AAPL", df)
+    save_recommendations(db_session, "AAPL", df.iloc[:1])
+    count = db_session.query(Recommendation).filter(Recommendation.ticker == "AAPL").count()
+    assert count == 1
 
 
 def test_load_all_ticker_metadata():

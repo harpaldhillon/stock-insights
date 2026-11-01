@@ -40,6 +40,19 @@ class Price(Base):
     )
 
 
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticker = Column(String, index=True, nullable=False)
+    period = Column(String, nullable=False)
+    strong_buy = Column(Integer, nullable=False)
+    buy = Column(Integer, nullable=False)
+    hold = Column(Integer, nullable=False)
+    sell = Column(Integer, nullable=False)
+    strong_sell = Column(Integer, nullable=False)
+
+
 class Analysis(Base):
     __tablename__ = "analysis"
 

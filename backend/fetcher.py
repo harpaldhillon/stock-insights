@@ -5,7 +5,7 @@ import pandas as pd
 import yfinance as yf
 from sqlalchemy.orm import Session
 
-from database import Price
+from database import Price, Recommendation
 from tickers import FTSE_TICKERS
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,39 @@ def save_price_history(db: Session, ticker: str, df: pd.DataFrame) -> None:
             low=float(row["low"]),
             close=float(row["close"]),
             volume=float(row["volume"]),
+        )
+        for _, row in df.iterrows()
+    ])
+    db.commit()
+
+
+def fetch_recommendations(ticker: str) -> pd.DataFrame | None:
+    try:
+        df = yf.Ticker(ticker).recommendations
+        if df is None or df.empty:
+            logger.warning("No recommendations returned for %s", ticker)
+            return None
+        required_columns = ["period", "strongBuy", "buy", "hold", "sell", "strongSell"]
+        if not set(required_columns).issubset(df.columns):
+            logger.warning("Unexpected recommendations columns for %s: %s", ticker, list(df.columns))
+            return None
+        return df[required_columns]
+    except Exception as err:
+        logger.exception("Failed to fetch recommendations for %s: %s", ticker, err)
+        return None
+
+
+def save_recommendations(db: Session, ticker: str, df: pd.DataFrame) -> None:
+    db.query(Recommendation).filter(Recommendation.ticker == ticker).delete()
+    db.bulk_save_objects([
+        Recommendation(
+            ticker=ticker,
+            period=row["period"],
+            strong_buy=int(row["strongBuy"]),
+            buy=int(row["buy"]),
+            hold=int(row["hold"]),
+            sell=int(row["sell"]),
+            strong_sell=int(row["strongSell"]),
         )
         for _, row in df.iterrows()
     ])

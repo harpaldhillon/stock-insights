@@ -62,10 +62,22 @@ class PricePoint(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RecommendationPeriod(BaseModel):
+    period: str
+    strong_buy: int
+    buy: int
+    hold: int
+    sell: int
+    strong_sell: int
+
+    model_config = {"from_attributes": True}
+
+
 class StockDetailResponse(BaseModel):
     company: TickerMeta
     analysis: AnalysisDetail
     prices: list[PricePoint]
+    recommendations: list[RecommendationPeriod] = []
 
     model_config = {"from_attributes": True}
 
