@@ -10,6 +10,7 @@ import SignalBadge from '../components/SignalBadge'
 import VerdictPanel from '../components/VerdictPanel'
 import RecommendationsChart from '../components/RecommendationsChart'
 import { highsDescription } from '../components/HighBadge'
+import StockSummary from '../components/StockSummary'
 
 function formatPrice(value, ticker) {
   if (value == null) return '–'
@@ -216,6 +217,14 @@ function StockDetail() {
 
       {/* Verdict */}
       <VerdictPanel analysis={stock.analysis} notes={stock.analysis.notes} />
+
+      {/* Summary of every indicator on this page */}
+      <StockSummary
+        stock={stock}
+        close={latestPrice?.close}
+        fmt={(v) => formatPrice(v, stock.company.ticker)}
+        consensus={consensus}
+      />
     </div>
   )
 }

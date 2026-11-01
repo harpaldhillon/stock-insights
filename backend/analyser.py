@@ -203,64 +203,70 @@ TARGET_ATR_MULTIPLIER = 3.0
 SCORE_NORMALIZATION_DIVISOR = 10.0  # scales score into a target-price multiplier
 
 
-def compute_score(latest: pd.Series, df: pd.DataFrame) -> tuple[float, str, str]:
-    score = 0.0
+def compute_score_breakdown(latest: pd.Series, df: pd.DataFrame) -> list[dict]:
+    """Points each scoring rule gave this stock, in rule order.
 
-    if latest["close"] > latest["sma200"]:
-        score += SCORE_ABOVE_SMA200
-    else:
-        score -= SCORE_ABOVE_SMA200
-    if latest["close"] > latest["sma50"]:
-        score += SCORE_ABOVE_SMA50
-    else:
-        score -= SCORE_ABOVE_SMA50
-    if latest["sma50"] > latest["sma200"]:
-        score += SCORE_SMA50_ABOVE_SMA200
-    else:
-        score -= SCORE_SMA50_ABOVE_SMA200
-    if latest["close"] > latest["ema20"]:
-        score += SCORE_ABOVE_EMA20
-    else:
-        score -= SCORE_ABOVE_EMA20
+    Every rule appears (with 0 points if it neither added nor subtracted) so the
+    UI can explain all of them. `max` is the most the rule can move the score
+    in either direction, i.e. how much weight it carries.
+    """
+    parts: list[dict] = []
 
-    if RSI_HEALTHY_LOW <= latest["rsi14"] <= RSI_HEALTHY_HIGH:
-        score += SCORE_RSI_HEALTHY
-    elif RSI_HEALTHY_HIGH < latest["rsi14"] <= RSI_OVERBOUGHT:
-        score += SCORE_RSI_STRONG
-    elif latest["rsi14"] > RSI_OVERBOUGHT:
-        score -= SCORE_RSI_OVERBOUGHT_PENALTY
-    elif latest["rsi14"] < RSI_OVERSOLD:
-        score -= SCORE_RSI_OVERSOLD_PENALTY
+    def add(key: str, points: float, max_points: float) -> None:
+        parts.append({"key": key, "points": points, "max": max_points})
+
+    add("sma200", SCORE_ABOVE_SMA200 if latest["close"] > latest["sma200"] else -SCORE_ABOVE_SMA200, SCORE_ABOVE_SMA200)
+    add("sma50", SCORE_ABOVE_SMA50 if latest["close"] > latest["sma50"] else -SCORE_ABOVE_SMA50, SCORE_ABOVE_SMA50)
+    add("sma_cross", SCORE_SMA50_ABOVE_SMA200 if latest["sma50"] > latest["sma200"] else -SCORE_SMA50_ABOVE_SMA200, SCORE_SMA50_ABOVE_SMA200)
+    add("ema20", SCORE_ABOVE_EMA20 if latest["close"] > latest["ema20"] else -SCORE_ABOVE_EMA20, SCORE_ABOVE_EMA20)
+
+    rsi = latest["rsi14"]
+    if RSI_HEALTHY_LOW <= rsi <= RSI_HEALTHY_HIGH:
+        rsi_points = SCORE_RSI_HEALTHY
+    elif RSI_HEALTHY_HIGH < rsi <= RSI_OVERBOUGHT:
+        rsi_points = SCORE_RSI_STRONG
+    elif rsi > RSI_OVERBOUGHT:
+        rsi_points = -SCORE_RSI_OVERBOUGHT_PENALTY
+    elif rsi < RSI_OVERSOLD:
+        rsi_points = -SCORE_RSI_OVERSOLD_PENALTY
+    else:
+        rsi_points = 0.0
+    add("rsi", rsi_points, max(SCORE_RSI_HEALTHY, SCORE_RSI_OVERSOLD_PENALTY))
 
     if latest["macd_line"] > latest["macd_signal"] and latest["macd_hist"] > 0:
-        score += SCORE_MACD_ALIGNED
+        macd_points = SCORE_MACD_ALIGNED
     elif latest["macd_line"] < latest["macd_signal"] and latest["macd_hist"] < 0:
-        score -= SCORE_MACD_ALIGNED
-    if df["macd_hist"].iloc[-1] > df["macd_hist"].iloc[-2]:
-        score += SCORE_MACD_HIST_RISING
+        macd_points = -SCORE_MACD_ALIGNED
     else:
-        score -= SCORE_MACD_HIST_RISING
+        macd_points = 0.0
+    add("macd", macd_points, SCORE_MACD_ALIGNED)
+    add("macd_hist", SCORE_MACD_HIST_RISING if df["macd_hist"].iloc[-1] > df["macd_hist"].iloc[-2] else -SCORE_MACD_HIST_RISING, SCORE_MACD_HIST_RISING)
 
-    if latest["volume5"] > latest["volume20"]:
-        score += SCORE_VOLUME_RISING
-    else:
-        score -= SCORE_VOLUME_FALLING_PENALTY
-    if latest["close_diff"] > 0 and latest["volume"] > latest["volume20"]:
-        score += SCORE_VOLUME_CONFIRMS_MOVE
+    add("volume_trend", SCORE_VOLUME_RISING if latest["volume5"] > latest["volume20"] else -SCORE_VOLUME_FALLING_PENALTY, SCORE_VOLUME_RISING)
+    add("volume_confirms", SCORE_VOLUME_CONFIRMS_MOVE if latest["close_diff"] > 0 and latest["volume"] > latest["volume20"] else 0.0, SCORE_VOLUME_CONFIRMS_MOVE)
 
     atr_pct = latest["atr14"] / latest["close"] * 100.0 if latest["close"] else 0.0
     if atr_pct < ATR_PCT_LOW:
-        score += SCORE_LOW_VOLATILITY
+        atr_points = SCORE_LOW_VOLATILITY
     elif atr_pct > ATR_PCT_HIGH:
-        score -= SCORE_HIGH_VOLATILITY_PENALTY
-    if latest["close"] < latest["bb_lower"] + (latest["bb_upper"] - latest["bb_lower"]) * BB_LOWER_HALF_FRACTION:
-        score += SCORE_NEAR_LOWER_BAND
-    if latest["close"] > latest["bb_upper"]:
-        score -= SCORE_ABOVE_UPPER_BAND_PENALTY
+        atr_points = -SCORE_HIGH_VOLATILITY_PENALTY
+    else:
+        atr_points = 0.0
+    add("atr", atr_points, max(SCORE_LOW_VOLATILITY, SCORE_HIGH_VOLATILITY_PENALTY))
+
+    lower_half = latest["close"] < latest["bb_lower"] + (latest["bb_upper"] - latest["bb_lower"]) * BB_LOWER_HALF_FRACTION
+    add("bb_lower_half", SCORE_NEAR_LOWER_BAND if lower_half else 0.0, SCORE_NEAR_LOWER_BAND)
+    add("bb_above_upper", -SCORE_ABOVE_UPPER_BAND_PENALTY if latest["close"] > latest["bb_upper"] else 0.0, SCORE_ABOVE_UPPER_BAND_PENALTY)
     bb_width_now = latest["bb_width"]
     bb_width_prev = df["bb_width"].iloc[-2] if len(df) >= 2 else bb_width_now
-    if bb_width_now < bb_width_prev:
-        score += SCORE_BANDS_TIGHTENING
+    add("bb_squeeze", SCORE_BANDS_TIGHTENING if bb_width_now < bb_width_prev else 0.0, SCORE_BANDS_TIGHTENING)
+    return parts
+
+
+def compute_score(latest: pd.Series, df: pd.DataFrame) -> tuple[float, str, str]:
+    score = 0.0
+    for part in compute_score_breakdown(latest, df):
+        score += part["points"]
 
     if score >= CONVICTION_HIGH_THRESHOLD:
         conviction = "HIGH"
@@ -317,6 +323,7 @@ def analyze_ticker(db: Session, ticker: str) -> bool:
         ytd_return = round((latest["close"] / year_start - 1.0) * 100.0, 2)
 
     notes = build_notes(indicator_df)
+    notes["score_breakdown"] = compute_score_breakdown(latest, indicator_df)
     analysis = Analysis(
         ticker=ticker,
         run_date=datetime.utcnow(),

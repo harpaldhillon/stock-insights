@@ -10,6 +10,7 @@ from analyser import (
     calculate_indicators,
     compute_high_breakout,
     compute_score,
+    compute_score_breakdown,
     get_ticker_metadata,
     run_full_analysis,
 )
@@ -347,3 +348,57 @@ def test_build_notes_includes_highs():
     df["close_diff"] = df["close"].diff()
     notes = build_notes(df)
     assert notes["highs"]["at_52w_high"] is True
+
+
+# ---- compute_score_breakdown ------------------------------------------------
+
+BREAKDOWN_KEYS = [
+    "sma200", "sma50", "sma_cross", "ema20", "rsi", "macd", "macd_hist",
+    "volume_trend", "volume_confirms", "atr", "bb_lower_half", "bb_above_upper", "bb_squeeze",
+]
+
+
+def test_score_breakdown_lists_every_rule_and_sums_to_score():
+    latest = pd.Series({
+        "close": 100.0, "sma200": 90.0, "sma50": 95.0, "ema20": 98.0,
+        "rsi14": 50.0, "macd_line": 1.0, "macd_signal": 0.5, "macd_hist": 0.5,
+        "volume5": 6_000_000.0, "volume20": 5_000_000.0, "volume": 6_000_000.0,
+        "close_diff": 1.0, "atr14": 2.0, "bb_lower": 90.0, "bb_upper": 110.0,
+        "bb_width": 20.0,
+    })
+    df = _df_for_score(0.2, 0.5, 22.0, 20.0)
+    parts = compute_score_breakdown(latest, df)
+    assert [p["key"] for p in parts] == BREAKDOWN_KEYS
+    assert sum(p["points"] for p in parts) == pytest.approx(compute_score(latest, df)[0])
+    assert all(abs(p["points"]) <= p["max"] for p in parts)
+    by_key = {p["key"]: p["points"] for p in parts}
+    assert by_key["sma200"] == 1.5
+    assert by_key["bb_above_upper"] == 0.0
+
+
+def test_score_breakdown_bearish_points():
+    latest = pd.Series({
+        "close": 80.0, "sma200": 95.0, "sma50": 90.0, "ema20": 92.0,
+        "rsi14": 75.0, "macd_line": 0.2, "macd_signal": 0.8, "macd_hist": -0.3,
+        "volume5": 3_000_000.0, "volume20": 5_000_000.0, "volume": 6_000_000.0,
+        "close_diff": -1.0, "atr14": 6.0, "bb_lower": 90.0, "bb_upper": 110.0,
+        "bb_width": 20.0,
+    })
+    df = _df_for_score(-0.1, -0.3, 18.0, 20.0)
+    by_key = {p["key"]: p["points"] for p in compute_score_breakdown(latest, df)}
+    assert by_key["sma200"] == -1.5
+    assert by_key["rsi"] == -1.0
+    assert by_key["macd"] == -1.0
+    assert by_key["atr"] == -0.5
+    assert sum(by_key.values()) == pytest.approx(-7.0)
+
+
+def test_analyze_ticker_stores_score_breakdown(db_session):
+    df = make_price_df(n=260)
+    from fetcher import save_price_history
+    save_price_history(db_session, "AAL.L", df)
+    assert analyze_ticker(db_session, "AAL.L") is True
+    analysis = db_session.query(Analysis).filter(Analysis.ticker == "AAL.L").one()
+    breakdown = analysis.notes["score_breakdown"]
+    assert [p["key"] for p in breakdown] == BREAKDOWN_KEYS
+    assert sum(p["points"] for p in breakdown) == pytest.approx(analysis.score)
