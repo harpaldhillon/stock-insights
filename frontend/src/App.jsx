@@ -113,7 +113,7 @@ function App() {
             <div className="min-w-0 leading-tight">
               <div className="flex items-center gap-2">
                 <p className="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                  FTSE Compass
+                  Stock Insight
                 </p>
                 <span className="relative hidden h-2 w-2 shrink-0 sm:flex" title="Live">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />

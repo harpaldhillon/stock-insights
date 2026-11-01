@@ -25,7 +25,7 @@ from tickers import TICKERS_BY_INDEX, TICKERS_BY_SECTOR
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("ftse-analyser")
 
-app = FastAPI(title="FTSE Compass", version="1.0")
+app = FastAPI(title="Stock Insight", version="1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

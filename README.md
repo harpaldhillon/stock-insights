@@ -1,4 +1,4 @@
-# FTSE Compass
+# Stock Insight
 
 A production-ready FastAPI + React application that loads FTSE100 and FTSE250 stock data, computes technical indicators, and displays Buy / Hold / Sell advice.
 
