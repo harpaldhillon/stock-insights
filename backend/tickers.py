@@ -497,19 +497,132 @@ FTSE_TICKERS = [
     {"ticker": "ZTF.L", "name": "Zotefoams", "sector": "Basic Materials", "index": "FTSE SmallCap"}
 ]
 
+# ── NASDAQ-100 ────────────────────────────────────────────────────────────
+# Constituents as of 22 Oct 2026 (101 securities: Alphabet has Class A and C).
+# Source: en.wikipedia.org/wiki/List_of_NASDAQ-100_companies. ICB industries
+# are mapped onto the sector names used above (e.g. Consumer Discretionary ->
+# Consumer Cyclical, Telecommunications -> Communication Services).
+NASDAQ100_TICKERS = [
+    {"ticker": "ADBE"   , "name": "Adobe Inc."                        , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "AMD"    , "name": "Advanced Micro Devices"            , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ABNB"   , "name": "Airbnb"                            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "ALNY"   , "name": "Alnylam Pharmaceuticals"           , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "GOOGL"  , "name": "Alphabet Inc. (Class A)"           , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "GOOG"   , "name": "Alphabet Inc. (Class C)"           , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "AMZN"   , "name": "Amazon"                            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "AEP"    , "name": "American Electric Power"           , "sector": "Utilities"             , "index": "NASDAQ100"},
+    {"ticker": "AMGN"   , "name": "Amgen"                             , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "ADI"    , "name": "Analog Devices"                    , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "AAPL"   , "name": "Apple Inc."                        , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "AMAT"   , "name": "Applied Materials"                 , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "APP"    , "name": "AppLovin"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ARM"    , "name": "Arm Holdings"                      , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ASML"   , "name": "ASML Holding"                      , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ALAB"   , "name": "Astera Labs"                       , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ADSK"   , "name": "Autodesk"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ADP"    , "name": "Automatic Data Processing"         , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "AXON"   , "name": "Axon Enterprise"                   , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "BKR"    , "name": "Baker Hughes"                      , "sector": "Energy"                , "index": "NASDAQ100"},
+    {"ticker": "BKNG"   , "name": "Booking Holdings"                  , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "AVGO"   , "name": "Broadcom"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "CDNS"   , "name": "Cadence Design Systems"            , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "CTAS"   , "name": "Cintas"                            , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "CSCO"   , "name": "Cisco"                             , "sector": "Communication Services", "index": "NASDAQ100"},
+    {"ticker": "CCEP"   , "name": "Coca-Cola Europacific Partners"    , "sector": "Consumer Defensive"    , "index": "NASDAQ100"},
+    {"ticker": "CMCSA"  , "name": "Comcast"                           , "sector": "Communication Services", "index": "NASDAQ100"},
+    {"ticker": "CEG"    , "name": "Constellation Energy"              , "sector": "Utilities"             , "index": "NASDAQ100"},
+    {"ticker": "CPRT"   , "name": "Copart"                            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "CRWV"   , "name": "CoreWeave"                         , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "COST"   , "name": "Costco"                            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "CRWD"   , "name": "CrowdStrike"                       , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "CSX"    , "name": "CSX Corporation"                   , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "DDOG"   , "name": "Datadog"                           , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "DXCM"   , "name": "DexCom"                            , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "FANG"   , "name": "Diamondback Energy"                , "sector": "Energy"                , "index": "NASDAQ100"},
+    {"ticker": "DASH"   , "name": "DoorDash"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "EXC"    , "name": "Exelon"                            , "sector": "Utilities"             , "index": "NASDAQ100"},
+    {"ticker": "FAST"   , "name": "Fastenal"                          , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "FER"    , "name": "Ferrovial"                         , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "FTNT"   , "name": "Fortinet"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "GEHC"   , "name": "GE HealthCare"                     , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "GILD"   , "name": "Gilead Sciences"                   , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "HONA"   , "name": "Honeywell Aerospace"               , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "HON"    , "name": "Honeywell Technologies"            , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "IDXX"   , "name": "Idexx Laboratories"                , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "INTC"   , "name": "Intel"                             , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "INTU"   , "name": "Intuit"                            , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ISRG"   , "name": "Intuitive Surgical"                , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "KDP"    , "name": "Keurig Dr Pepper"                  , "sector": "Consumer Defensive"    , "index": "NASDAQ100"},
+    {"ticker": "KLAC"   , "name": "KLA Corporation"                   , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "LRCX"   , "name": "Lam Research"                      , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "LIN"    , "name": "Linde plc"                         , "sector": "Basic Materials"       , "index": "NASDAQ100"},
+    {"ticker": "LITE"   , "name": "Lumentum"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MAR"    , "name": "Marriott International"            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "MRVL"   , "name": "Marvell Technology"                , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MELI"   , "name": "Mercado Libre"                     , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "META"   , "name": "Meta Platforms"                    , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MCHP"   , "name": "Microchip Technology"              , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MU"     , "name": "Micron Technology"                 , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MSFT"   , "name": "Microsoft"                         , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MSTR"   , "name": "MicroStrategy"                     , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MRNA"   , "name": "Moderna"                           , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "MDLZ"   , "name": "Mondelez International"            , "sector": "Consumer Defensive"    , "index": "NASDAQ100"},
+    {"ticker": "MPWR"   , "name": "Monolithic Power Systems"          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "MNST"   , "name": "Monster Beverage"                  , "sector": "Consumer Defensive"    , "index": "NASDAQ100"},
+    {"ticker": "NBIS"   , "name": "Nebius Group"                      , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "NFLX"   , "name": "Netflix, Inc."                     , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "NVDA"   , "name": "Nvidia"                            , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "NXPI"   , "name": "NXP Semiconductors"                , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ORLY", "name": "O'Reilly Automotive", "sector": "Consumer Cyclical", "index": "NASDAQ100"},
+    {"ticker": "ODFL"   , "name": "Old Dominion Freight Line"         , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "PCAR"   , "name": "Paccar"                            , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "PLTR"   , "name": "Palantir Technologies"             , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "PANW"   , "name": "Palo Alto Networks"                , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "PAYX"   , "name": "Paychex"                           , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "PYPL"   , "name": "PayPal"                            , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "PDD"    , "name": "PDD Holdings"                      , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "PEP"    , "name": "PepsiCo"                           , "sector": "Consumer Defensive"    , "index": "NASDAQ100"},
+    {"ticker": "QCOM"   , "name": "Qualcomm"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "REGN"   , "name": "Regeneron Pharmaceuticals"         , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "RKLB"   , "name": "Rocket Lab"                        , "sector": "Industrials"           , "index": "NASDAQ100"},
+    {"ticker": "ROP"    , "name": "Roper Technologies"                , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "ROST"   , "name": "Ross Stores"                       , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "SNDK"   , "name": "Sandisk"                           , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "STX"    , "name": "Seagate Technology"                , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "SHOP"   , "name": "Shopify"                           , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "SPCX"   , "name": "SpaceX"                            , "sector": "Communication Services", "index": "NASDAQ100"},
+    {"ticker": "SBUX"   , "name": "Starbucks"                         , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "SNPS"   , "name": "Synopsys"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "TMUS"   , "name": "T-Mobile US"                       , "sector": "Communication Services", "index": "NASDAQ100"},
+    {"ticker": "TTWO"   , "name": "Take-Two Interactive"              , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "TER"    , "name": "Teradyne"                          , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "TSLA"   , "name": "Tesla, Inc."                       , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "TXN"    , "name": "Texas Instruments"                 , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "TRI"    , "name": "Thomson Reuters"                   , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "VRTX"   , "name": "Vertex Pharmaceuticals"            , "sector": "Healthcare"            , "index": "NASDAQ100"},
+    {"ticker": "WMT"    , "name": "Walmart"                           , "sector": "Consumer Cyclical"     , "index": "NASDAQ100"},
+    {"ticker": "WDC"    , "name": "Western Digital"                   , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "WDAY"   , "name": "Workday, Inc."                     , "sector": "Technology"            , "index": "NASDAQ100"},
+    {"ticker": "XEL"    , "name": "Xcel Energy"                       , "sector": "Utilities"             , "index": "NASDAQ100"},
+]
+
+# Everything the app tracks. Refresh, analysis and lookups use this list.
+ALL_TICKERS = FTSE_TICKERS + NASDAQ100_TICKERS
+
+
 # Static lookup indices, built once at import time instead of re-scanning the
-# ~500-row list above on every request. A handful of tickers appear more than
+# ~600-row list above on every request. A handful of tickers appear more than
 # once in FTSE_TICKERS with conflicting metadata (e.g. listed under both
 # FTSE100 and FTSE250) — TICKERS_BY_TICKER uses setdefault() so it keeps the
 # *first* matching entry, same as the linear-scan `next(...)` lookup it
 # replaces, rather than silently flipping to "last one wins".
 TICKERS_BY_TICKER: dict[str, dict] = {}
-for _item in FTSE_TICKERS:
+for _item in ALL_TICKERS:
     TICKERS_BY_TICKER.setdefault(_item["ticker"], _item)
 
 TICKERS_BY_INDEX: dict[str, set[str]] = {}
 TICKERS_BY_SECTOR: dict[str, set[str]] = {}
-for _item in FTSE_TICKERS:
+for _item in ALL_TICKERS:
     TICKERS_BY_INDEX.setdefault(_item["index"], set()).add(_item["ticker"])
     TICKERS_BY_SECTOR.setdefault(_item["sector"].lower(), set()).add(_item["ticker"])
 del _item

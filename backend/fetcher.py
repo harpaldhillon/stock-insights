@@ -6,7 +6,7 @@ import yfinance as yf
 from sqlalchemy.orm import Session
 
 from database import Price, Recommendation
-from tickers import FTSE_TICKERS
+from tickers import ALL_TICKERS
 
 logger = logging.getLogger(__name__)
 
@@ -92,4 +92,4 @@ def save_recommendations(db: Session, ticker: str, df: pd.DataFrame) -> None:
 
 
 def load_all_ticker_metadata() -> list[dict]:
-    return FTSE_TICKERS
+    return ALL_TICKERS

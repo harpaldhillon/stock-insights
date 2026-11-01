@@ -4,7 +4,7 @@ import api from '../api/client'
 import SignalPanel from '../components/SignalPanel'
 import { HIGHS_FILTERS, matchesHighs, matchesSearch, matchesSector } from '../lib/filters'
 
-const indexOptions = ['ALL', 'FTSE100', 'FTSE250', 'FTSE SmallCap']
+const indexOptions = ['ALL', 'FTSE100', 'FTSE250', 'FTSE SmallCap', 'NASDAQ100']
 const sortOptions = [
   { value: 'score_desc', label: 'Score (high → low)' },
   { value: 'score_asc',  label: 'Score (low → high)' },

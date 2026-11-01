@@ -5,10 +5,11 @@ import HighBadge from './HighBadge'
 import { SIGNALS, allItems, matchesHighs, matchesSearch, matchesSector } from '../lib/filters'
 
 const INDEX_TEXT = {
-  ALL: { name: 'all tracked', desc: 'Every stock tracked: FTSE 100, FTSE 250 and FTSE SmallCap.' },
+  ALL: { name: 'all tracked', desc: 'Every stock tracked: FTSE 100, FTSE 250, FTSE SmallCap and NASDAQ-100.' },
   FTSE100: { name: 'FTSE 100', desc: 'The 100 largest companies listed in London, by market value.' },
   FTSE250: { name: 'FTSE 250', desc: 'The next 250 largest companies: UK mid caps.' },
   'FTSE SmallCap': { name: 'FTSE SmallCap', desc: 'Smaller companies outside the FTSE 350.' },
+  NASDAQ100: { name: 'NASDAQ-100', desc: 'The 100 largest non-financial companies listed on the US Nasdaq exchange, priced in US dollars.' },
 }
 
 const SORT_TEXT = {

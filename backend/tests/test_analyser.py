@@ -38,8 +38,8 @@ def test_ftse_tickers_has_no_duplicate_tickers():
     # which made TICKERS_BY_INDEX incorrectly show the same ticker under two
     # different index filters at once. Every ticker must now appear exactly once.
     from collections import Counter
-    from tickers import FTSE_TICKERS
-    counts = Counter(item["ticker"] for item in FTSE_TICKERS)
+    from tickers import ALL_TICKERS
+    counts = Counter(item["ticker"] for item in ALL_TICKERS)
     duplicates = {ticker: n for ticker, n in counts.items() if n > 1}
     assert duplicates == {}
 
@@ -265,7 +265,7 @@ def test_analyze_ticker_replaces_existing_analysis(db_session, sample_price_df):
 
 def test_run_full_analysis(db_session, sample_price_df, monkeypatch):
     monkeypatch.setattr(
-        "analyser.FTSE_TICKERS",
+        "analyser.ALL_TICKERS",
         [
             {"ticker": "AAA.L", "name": "A", "sector": "Financials", "index": "FTSE100"},
             {"ticker": "BBB.L", "name": "B", "sector": "Financials", "index": "FTSE100"},
@@ -402,3 +402,11 @@ def test_analyze_ticker_stores_score_breakdown(db_session):
     breakdown = analysis.notes["score_breakdown"]
     assert [p["key"] for p in breakdown] == BREAKDOWN_KEYS
     assert sum(p["points"] for p in breakdown) == pytest.approx(analysis.score)
+
+
+def test_nasdaq100_tickers_present_and_tagged():
+    from tickers import NASDAQ100_TICKERS, TICKERS_BY_INDEX
+    assert len(NASDAQ100_TICKERS) == 101
+    assert {"AAPL", "MSFT", "NVDA", "GOOGL", "GOOG"} <= TICKERS_BY_INDEX["NASDAQ100"]
+    meta = get_ticker_metadata("NVDA")
+    assert meta["index"] == "NASDAQ100" and meta["sector"] == "Technology"

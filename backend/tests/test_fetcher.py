@@ -9,7 +9,7 @@ from fetcher import (
     save_price_history,
     save_recommendations,
 )
-from tickers import FTSE_TICKERS
+from tickers import ALL_TICKERS
 
 
 def _make_single_level_df(n=5):
@@ -155,6 +155,6 @@ def test_save_recommendations_replaces_existing(db_session):
 
 def test_load_all_ticker_metadata():
     tickers = load_all_ticker_metadata()
-    assert tickers is FTSE_TICKERS
+    assert tickers is ALL_TICKERS
     assert len(tickers) > 0
     assert {"ticker", "name", "sector", "index"}.issubset(tickers[0].keys())

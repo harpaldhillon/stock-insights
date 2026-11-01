@@ -109,7 +109,7 @@ def get_status(db: Session = Depends(get_db)):
 
 @app.get("/api/summary")
 def get_summary(
-    index: str = Query("ALL", pattern="^(ALL|FTSE100|FTSE250|FTSE SmallCap)$"),
+    index: str = Query("ALL", pattern="^(ALL|FTSE100|FTSE250|FTSE SmallCap|NASDAQ100)$"),
     sector: str | None = None,
     sort: str = Query("score_desc", pattern="^(score_desc|score_asc|ticker)$"),
     db: Session = Depends(get_db),

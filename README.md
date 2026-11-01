@@ -1,6 +1,6 @@
 # Stock Insight
 
-A production-ready FastAPI + React application that loads FTSE100 and FTSE250 stock data, computes technical indicators, and displays Buy / Hold / Sell advice.
+A FastAPI + React application that loads stock data for the FTSE 100, FTSE 250, FTSE SmallCap and NASDAQ-100, computes technical indicators, and displays Buy / Hold / Sell advice.
 
 ## Backend
 

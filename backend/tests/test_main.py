@@ -270,3 +270,19 @@ def test_get_strategy_reflects_analyser_constants(client_env):
     assert groups == {"Trend", "Momentum", "Volume", "Volatility"}
     sma200 = next(r for r in body["rules"] if "200-day SMA (long-term" in r["rule"])
     assert sma200["points"].startswith(f"+{analyser.SCORE_ABOVE_SMA200:g}")
+
+
+def test_summary_nasdaq100_filter(client_env):
+    client, session = client_env
+    session.add_all([
+        _make_analysis("AAL.L", "BUY", score=8.0),  # FTSE100
+        _make_analysis("NVDA", "BUY", score=7.0),   # NASDAQ100
+        _make_analysis("AAPL", "HOLD", score=1.0),  # NASDAQ100
+    ])
+    session.commit()
+    resp = client.get("/api/summary", params={"index": "NASDAQ100"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [r["ticker"] for r in body["BUY"]] == ["NVDA"]
+    assert [r["ticker"] for r in body["HOLD"]] == ["AAPL"]
+    assert body["BUY"][0]["index"] == "NASDAQ100"

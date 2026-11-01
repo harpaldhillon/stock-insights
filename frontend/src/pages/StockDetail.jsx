@@ -11,12 +11,8 @@ import VerdictPanel from '../components/VerdictPanel'
 import RecommendationsChart from '../components/RecommendationsChart'
 import { highsDescription } from '../components/HighBadge'
 import StockSummary from '../components/StockSummary'
+import { formatPrice } from '../lib/format'
 
-function formatPrice(value, ticker) {
-  if (value == null) return '–'
-  if (ticker?.endsWith('.L')) return `${Number(value).toFixed(0)}p`
-  return Number(value).toLocaleString('en-GB', { style: 'currency', currency: 'GBP' })
-}
 
 function consensusFromRecommendation(rec) {
   if (!rec) return null

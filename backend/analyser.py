@@ -6,7 +6,7 @@ import pandas_ta as ta
 from sqlalchemy.orm import Session
 
 from database import Analysis, Price
-from tickers import FTSE_TICKERS, TICKERS_BY_TICKER
+from tickers import ALL_TICKERS, TICKERS_BY_TICKER
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +358,7 @@ def analyze_ticker(db: Session, ticker: str) -> bool:
 
 
 def run_full_analysis(db: Session) -> tuple[int, int]:
-    tickers = [item["ticker"] for item in FTSE_TICKERS]
+    tickers = [item["ticker"] for item in ALL_TICKERS]
     total = len(tickers)
     success = 0
     for ticker in tickers:
