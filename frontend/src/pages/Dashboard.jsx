@@ -4,6 +4,13 @@ import api from '../api/client'
 import SignalPanel from '../components/SignalPanel'
 
 const indexOptions = ['ALL', 'FTSE100', 'FTSE250', 'FTSE SmallCap']
+// Client-side "Highs" filter over analysis.notes.highs (computed by the analyser).
+const HIGHS_FILTERS = {
+  '':    () => true,
+  '52w': (item) => !!item.notes?.highs?.at_52w_high,
+  multi: (item) => !!item.notes?.highs?.multi_year_breakout,
+}
+
 const sortOptions = [
   { value: 'score_desc', label: 'Score (high → low)' },
   { value: 'score_asc',  label: 'Score (low → high)' },
@@ -22,7 +29,7 @@ function StatPill({ label, value, colorClass }) {
 function Dashboard({ status, refreshTick = 0 }) {
   const navigate = useNavigate()
   const [summary, setSummary] = useState(null)
-  const [filters, setFilters] = useState({ index: 'ALL', sector: '', sort: 'score_desc' })
+  const [filters, setFilters] = useState({ index: 'ALL', sector: '', highs: '', sort: 'score_desc' })
   const [search,  setSearch]  = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -69,12 +76,22 @@ function Dashboard({ status, refreshTick = 0 }) {
     }
   }, [sectors, summary, filters.sector])
 
+  // Counts shown in the Highs dropdown, within the currently selected sector.
+  const highsCounts = useMemo(() => {
+    const inSector = allItems.filter((item) => !filters.sector || item.sector === filters.sector)
+    return {
+      '52w': inSector.filter(HIGHS_FILTERS['52w']).length,
+      multi: inSector.filter(HIGHS_FILTERS.multi).length,
+    }
+  }, [allItems, filters.sector])
+
   const sectorFilteredSummary = useMemo(() => {
     if (!summary) return null
-    if (!filters.sector) return summary
-    const match = (item) => item.sector === filters.sector
+    if (!filters.sector && !filters.highs) return summary
+    const highsMatch = HIGHS_FILTERS[filters.highs] || HIGHS_FILTERS['']
+    const match = (item) => (!filters.sector || item.sector === filters.sector) && highsMatch(item)
     return { BUY: summary.BUY.filter(match), HOLD: summary.HOLD.filter(match), SELL: summary.SELL.filter(match) }
-  }, [summary, filters.sector])
+  }, [summary, filters.sector, filters.highs])
 
   const sectorFilteredItems = useMemo(() => {
     if (!sectorFilteredSummary) return []
@@ -192,6 +209,18 @@ function Dashboard({ status, refreshTick = 0 }) {
             >
               <option value="">All sectors</option>
               {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Highs</label>
+            <select
+              value={filters.highs}
+              onChange={(e) => setFilters((f) => ({ ...f, highs: e.target.value }))}
+              className={selectClass}
+            >
+              <option value="">All stocks</option>
+              <option value="52w">At 52-week high ({highsCounts['52w']})</option>
+              <option value="multi">Multi-year breakout ({highsCounts.multi})</option>
             </select>
           </div>
           <div>

@@ -9,6 +9,7 @@ import VolumeChart from '../components/VolumeChart'
 import SignalBadge from '../components/SignalBadge'
 import VerdictPanel from '../components/VerdictPanel'
 import RecommendationsChart from '../components/RecommendationsChart'
+import { highsDescription } from '../components/HighBadge'
 
 function formatPrice(value, ticker) {
   if (value == null) return '–'
@@ -196,7 +197,7 @@ function StockDetail() {
 
       {/* 52-week + volatility metrics */}
       <section className="grid gap-4 xl:grid-cols-4">
-        <MetricCard title="52W High" value={formatPrice(stock.analysis.week52_high, stock.company.ticker)} subtitle="Resistance" />
+        <MetricCard title="52W High" value={formatPrice(stock.analysis.week52_high, stock.company.ticker)} subtitle={highsDescription(stock.analysis.notes?.highs) ?? 'Resistance'} />
         <MetricCard title="52W Low"  value={formatPrice(stock.analysis.week52_low,  stock.company.ticker)} subtitle="Support" />
         <MetricCard title="ATR (14)" value={stock.analysis.atr14?.toFixed(2) ?? '–'}                       subtitle="Volatility" />
         <MetricCard title="BB Upper" value={formatPrice(stock.analysis.bb_upper,     stock.company.ticker)} subtitle="Bollinger band" />

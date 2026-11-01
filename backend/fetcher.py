@@ -10,11 +10,14 @@ from tickers import FTSE_TICKERS
 
 logger = logging.getLogger(__name__)
 
+PRICE_HISTORY_DAYS = 5 * 365 + 1
+
 
 def fetch_price_history(ticker: str) -> pd.DataFrame | None:
     try:
         end_date = datetime.utcnow().date()
-        start_date = end_date - timedelta(days=730)
+        # ~5 years: enough history to tell a multi-year breakout from a 52-week high.
+        start_date = end_date - timedelta(days=PRICE_HISTORY_DAYS)
         df = yf.download(ticker, start=start_date.isoformat(), end=end_date.isoformat(), progress=False, auto_adjust=False, threads=False)
         if df.empty:
             logger.warning("No data returned for %s", ticker)

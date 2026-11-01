@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import HighBadge from './HighBadge'
 
 const PAGE_SIZE = 25
 const COL_WIDTHS    = ['w-[17%]', 'w-[19%]', 'w-[20%]', 'w-[14%]', 'w-[16%]', 'w-[14%]']
@@ -47,7 +48,9 @@ function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md' }) {
                 className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
                 <td className="truncate px-1.5 py-2.5 font-mono font-semibold text-slate-900 dark:text-white">{item.ticker}</td>
-                <td className="truncate px-1.5 py-2.5 text-slate-600 dark:text-slate-300" title={item.name}>{item.name}</td>
+                <td className="truncate px-1.5 py-2.5 text-slate-600 dark:text-slate-300" title={item.name}>
+                  <HighBadge highs={item.notes?.highs} compact={size !== 'lg'} />{item.name}
+                </td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">
                   {item.current_price != null ? Number(item.current_price).toFixed(2) : '—'}
                 </td>

@@ -83,7 +83,62 @@ def build_notes(df: pd.DataFrame) -> dict:
             notes["pattern"] = "Breakout"
         elif latest["close"] < df["close"].rolling(window=20, min_periods=1).min().iloc[-2]:
             notes["pattern"] = "Breakdown"
+    notes["highs"] = compute_high_breakout(df)
     return notes
+
+
+# ---------------------------------------------------------------------------
+# 52-week high / multi-year breakout detection
+# ---------------------------------------------------------------------------
+TRADING_DAYS_PER_YEAR = 252
+AT_52W_HIGH_TOLERANCE_PCT = 2.0     # latest close within 2% of the 52-week high counts as "at" it
+BREAKOUT_RECENT_DAYS = 5            # a breakout peak set in the last week still counts after a small pullback
+MULTI_YEAR_MIN_YEARS = 2.0          # recent peak must be the highest close in at least this many years
+
+
+def compute_high_breakout(df: pd.DataFrame) -> dict:
+    """Is the stock at its 52-week high, and is that the highest price in years?
+
+    years_high is how long ago the price last closed at or above the recent
+    (last BREAKOUT_RECENT_DAYS) peak. If it never did within the fetched
+    history, years_high is the length of that history and years_high_is_min is
+    True, meaning "at least this many years" (shown as e.g. "5y+").
+    """
+    result = {
+        "at_52w_high": False,
+        "pct_from_52w_high": None,
+        "multi_year_breakout": False,
+        "years_high": None,
+        "years_high_is_min": False,
+    }
+    closes = df["close"].dropna()
+    if closes.empty:
+        return result
+    dates = pd.to_datetime(df.loc[closes.index, "date"])
+    latest_close = float(closes.iloc[-1])
+    week52_high = float(closes.tail(TRADING_DAYS_PER_YEAR).max())
+    if week52_high <= 0:
+        return result
+
+    pct_from_high = (latest_close / week52_high - 1.0) * 100.0
+    result["pct_from_52w_high"] = round(pct_from_high, 2)
+    result["at_52w_high"] = bool(pct_from_high >= -AT_52W_HIGH_TOLERANCE_PCT)
+    if not result["at_52w_high"]:
+        return result
+
+    recent_peak = closes.tail(BREAKOUT_RECENT_DAYS).max()
+    prior = closes.iloc[:-BREAKOUT_RECENT_DAYS]
+    higher_before = prior[prior >= recent_peak]
+    latest_date = dates.iloc[-1]
+    if higher_before.empty:
+        since = dates.iloc[0]
+        result["years_high_is_min"] = True
+    else:
+        since = dates.loc[higher_before.index[-1]]
+    years = (latest_date - since).days / 365.25
+    result["years_high"] = round(years, 1)
+    result["multi_year_breakout"] = bool(years >= MULTI_YEAR_MIN_YEARS)
+    return result
 
 
 # Indicators compute_score() reads directly off the latest row. NaN here (e.g. a

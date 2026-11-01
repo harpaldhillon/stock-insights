@@ -8,6 +8,7 @@ from analyser import (
     analyze_ticker,
     build_notes,
     calculate_indicators,
+    compute_high_breakout,
     compute_score,
     get_ticker_metadata,
     run_full_analysis,
@@ -277,3 +278,72 @@ def test_run_full_analysis(db_session, sample_price_df, monkeypatch):
     assert success == 1
     assert db_session.query(Analysis).filter(Analysis.ticker == "AAA.L").count() == 1
     assert db_session.query(Analysis).filter(Analysis.ticker == "BBB.L").count() == 0
+
+
+# ---- compute_high_breakout --------------------------------------------------
+
+def _closes_df(closes, start=date(2020, 1, 1)):
+    # One row per trading day; spacing rows ~1.45 calendar days apart makes
+    # 252 rows span roughly one calendar year, like real trading data.
+    dates = pd.to_datetime([start + timedelta(days=round(i * 365.25 / 252)) for i in range(len(closes))])
+    return pd.DataFrame({"date": dates, "close": np.asarray(closes, dtype=float)})
+
+
+def test_high_breakout_multi_year_when_new_all_time_high():
+    # 4 years flat at 100, then a rally to 130 — highest close in all history.
+    closes = [100.0] * (252 * 4) + list(np.linspace(101, 130, 20))
+    result = compute_high_breakout(_closes_df(closes))
+    assert result["at_52w_high"] is True
+    assert result["multi_year_breakout"] is True
+    assert result["years_high_is_min"] is True
+    assert result["years_high"] >= 4.0
+    assert result["pct_from_52w_high"] == 0.0
+
+
+def test_high_breakout_measures_years_since_last_higher_close():
+    # Peak of 160 three years ago, then a long decline, now rallied to 155 —
+    # the highest close since that old peak, so a 3-year (not all-time) high.
+    closes = [160.0] + [100.0] * (252 * 3) + list(np.linspace(110, 155, 20))
+    result = compute_high_breakout(_closes_df(closes))
+    assert result["multi_year_breakout"] is True
+    assert result["years_high_is_min"] is False
+    assert 2.9 <= result["years_high"] <= 3.2
+
+
+def test_high_breakout_52w_high_but_not_multi_year():
+    # Exceeded 200 eighteen months ago; today's 52-week high is below that.
+    closes = [200.0] * 10 + [100.0] * (252 + 126) + list(np.linspace(101, 120, 20))
+    result = compute_high_breakout(_closes_df(closes))
+    assert result["at_52w_high"] is True
+    assert result["multi_year_breakout"] is False
+    assert result["years_high"] < 2.0
+
+
+def test_high_breakout_within_tolerance_after_small_pullback():
+    # New high of 130 three days ago, 1.5% pullback since: still "at" the high,
+    # and the recent peak still counts as the breakout.
+    closes = [100.0] * (252 * 3) + list(np.linspace(101, 130, 20)) + [129.0, 128.05]
+    result = compute_high_breakout(_closes_df(closes))
+    assert result["at_52w_high"] is True
+    assert result["multi_year_breakout"] is True
+
+
+def test_high_breakout_not_at_high_when_well_below():
+    closes = [100.0] * 300 + [90.0] * 10
+    result = compute_high_breakout(_closes_df(closes))
+    assert result["at_52w_high"] is False
+    assert result["multi_year_breakout"] is False
+    assert result["years_high"] is None
+    assert result["pct_from_52w_high"] == -10.0
+
+
+def test_build_notes_includes_highs():
+    closes = [100.0] * 300 + [120.0]
+    df = _closes_df(closes)
+    df["high"] = df["close"] + 1
+    df["low"] = df["close"] - 1
+    df["volume"] = 1_000_000.0
+    df["volume20"] = 1_000_000.0
+    df["close_diff"] = df["close"].diff()
+    notes = build_notes(df)
+    assert notes["highs"]["at_52w_high"] is True
