@@ -32,6 +32,28 @@ function consensusFromRecommendation(rec) {
   return { label, meanScore, total }
 }
 
+// Matches the analyser: week52_high is the highest close over the last 252 trading days.
+const TRADING_DAYS_52W = 252
+
+function find52WeekHigh(prices) {
+  if (!prices?.length) return null
+  const window = prices.slice(-TRADING_DAYS_52W)
+  // Latest day wins on ties, so a stock sitting at its high shows the most recent date.
+  const best = window.reduce((top, p) => (p.close >= top.close ? p : top), window[0])
+  const lastDate = new Date(prices[prices.length - 1].date)
+  const date = new Date(best.date)
+  const daysAgo = Math.round((lastDate - date) / 86_400_000)
+  return { date, daysAgo }
+}
+
+function formatAgo(days) {
+  if (days === 0) return 'latest session'
+  if (days === 1) return '1 day ago'
+  if (days < 60) return `${days} days ago`
+  const months = Math.round(days / 30.44)
+  return `${months} months ago`
+}
+
 const BackIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="15 18 9 12 15 6" />
@@ -70,6 +92,7 @@ function StockDetail() {
 
   const latestPrice = useMemo(() => stock?.prices?.[stock.prices.length - 1], [stock])
   const consensus = useMemo(() => consensusFromRecommendation(stock?.recommendations?.[0]), [stock])
+  const high52 = useMemo(() => find52WeekHigh(stock?.prices), [stock])
 
   if (loading) {
     return (
@@ -198,7 +221,20 @@ function StockDetail() {
 
       {/* 52-week + volatility metrics */}
       <section className="grid gap-4 xl:grid-cols-4">
-        <MetricCard title="52W High" value={formatPrice(stock.analysis.week52_high, stock.company.ticker)} subtitle={highsDescription(stock.analysis.notes?.highs) ?? 'Resistance'} />
+        <MetricCard
+          title="52W High"
+          value={formatPrice(stock.analysis.week52_high, stock.company.ticker)}
+          subtitle={
+            <>
+              {high52 && (
+                <span className="block text-slate-500 dark:text-slate-400">
+                  Reached {high52.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} ({formatAgo(high52.daysAgo)})
+                </span>
+              )}
+              <span className="block">{highsDescription(stock.analysis.notes?.highs) ?? 'Resistance'}</span>
+            </>
+          }
+        />
         <MetricCard title="52W Low"  value={formatPrice(stock.analysis.week52_low,  stock.company.ticker)} subtitle="Support" />
         <MetricCard title="ATR (14)" value={stock.analysis.atr14?.toFixed(2) ?? '–'}                       subtitle="Volatility" />
         <MetricCard title="BB Upper" value={formatPrice(stock.analysis.bb_upper,     stock.company.ticker)} subtitle="Bollinger band" />
