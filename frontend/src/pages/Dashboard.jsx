@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
-import StockTable from '../components/StockTable'
-import SignalBadge from '../components/SignalBadge'
+import SignalPanel from '../components/SignalPanel'
 
 const indexOptions = ['ALL', 'FTSE100', 'FTSE250', 'FTSE SmallCap']
 const sortOptions = [
@@ -219,44 +218,14 @@ function Dashboard({ status, refreshTick = 0 }) {
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* BUY */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-900/30 dark:bg-emerald-950/30">
-              <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                BUY <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs dark:bg-emerald-900/50 dark:text-emerald-300">{filteredSummary?.BUY.length ?? 0}</span>
-              </h3>
-              <SignalBadge signal="BUY" />
-            </div>
-            <div className="p-3">
-              <StockTable rows={filteredSummary?.BUY || []} onRowClick={(ticker) => navigate(`/stock/${ticker}`)} />
-            </div>
-          </div>
-
-          {/* HOLD */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-4 py-3 dark:border-amber-900/30 dark:bg-amber-950/30">
-              <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                HOLD <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs dark:bg-amber-900/50 dark:text-amber-300">{filteredSummary?.HOLD.length ?? 0}</span>
-              </h3>
-              <SignalBadge signal="HOLD" />
-            </div>
-            <div className="p-3">
-              <StockTable rows={filteredSummary?.HOLD || []} onRowClick={(ticker) => navigate(`/stock/${ticker}`)} />
-            </div>
-          </div>
-
-          {/* SELL */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-rose-100 bg-rose-50 px-4 py-3 dark:border-rose-900/30 dark:bg-rose-950/30">
-              <h3 className="text-sm font-semibold text-rose-700 dark:text-rose-400">
-                SELL <span className="ml-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-xs dark:bg-rose-900/50 dark:text-rose-300">{filteredSummary?.SELL.length ?? 0}</span>
-              </h3>
-              <SignalBadge signal="SELL" />
-            </div>
-            <div className="p-3">
-              <StockTable rows={filteredSummary?.SELL || []} onRowClick={(ticker) => navigate(`/stock/${ticker}`)} />
-            </div>
-          </div>
+          {['BUY', 'HOLD', 'SELL'].map((signal) => (
+            <SignalPanel
+              key={signal}
+              signal={signal}
+              rows={filteredSummary?.[signal] || []}
+              onRowClick={(ticker) => navigate(`/stock/${ticker}`)}
+            />
+          ))}
         </div>
       )}
     </div>

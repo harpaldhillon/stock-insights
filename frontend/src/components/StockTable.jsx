@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 
 const PAGE_SIZE = 25
+const COL_WIDTHS    = ['w-[17%]', 'w-[19%]', 'w-[20%]', 'w-[14%]', 'w-[16%]', 'w-[14%]']
+// Expanded view: give the company name most of the extra width so it isn't truncated.
+const COL_WIDTHS_LG = ['w-[10%]', 'w-[42%]', 'w-[13%]', 'w-[11%]', 'w-[12%]', 'w-[12%]']
 
-function StockTable({ rows, onRowClick }) {
+function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md' }) {
   const [page, setPage] = useState(0)
 
   // Reset to first page whenever the data changes (filter/sort)
@@ -16,20 +19,15 @@ function StockTable({ rows, onRowClick }) {
     )
   }
 
-  const totalPages = Math.ceil(rows.length / PAGE_SIZE)
-  const pageRows   = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const totalPages = Math.ceil(rows.length / pageSize)
+  const pageRows   = rows.slice(page * pageSize, (page + 1) * pageSize)
 
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
-        <table className="w-full table-fixed text-left text-xs">
+        <table className={`w-full table-fixed text-left ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
           <colgroup>
-            <col className="w-[17%]" />
-            <col className="w-[19%]" />
-            <col className="w-[20%]" />
-            <col className="w-[14%]" />
-            <col className="w-[16%]" />
-            <col className="w-[14%]" />
+            {(size === 'lg' ? COL_WIDTHS_LG : COL_WIDTHS).map((w, i) => <col key={i} className={w} />)}
           </colgroup>
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/60">
@@ -65,7 +63,7 @@ function StockTable({ rows, onRowClick }) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <span className="text-[11px] text-slate-400 dark:text-slate-500">
-            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, rows.length)} of {rows.length}
+            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, rows.length)} of {rows.length}
           </span>
           <div className="flex items-center gap-1">
             <button
