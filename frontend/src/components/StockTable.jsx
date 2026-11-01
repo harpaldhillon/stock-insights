@@ -3,9 +3,9 @@ import HighBadge from './HighBadge'
 import { formatPrice } from '../lib/format'
 
 const PAGE_SIZE = 25
-const COL_WIDTHS    = ['w-[17%]', 'w-[19%]', 'w-[20%]', 'w-[14%]', 'w-[16%]', 'w-[14%]']
+const COL_WIDTHS    = ['w-[18%]', 'w-[28%]', 'w-[22%]', 'w-[14%]', 'w-[18%]']
 // Expanded view: give the company name most of the extra width so it isn't truncated.
-const COL_WIDTHS_LG = ['w-[10%]', 'w-[42%]', 'w-[13%]', 'w-[11%]', 'w-[12%]', 'w-[12%]']
+const COL_WIDTHS_LG = ['w-[10%]', 'w-[48%]', 'w-[15%]', 'w-[12%]', 'w-[15%]']
 
 // Pass page/onPageChange to control paging from outside (the dashboard does, so
 // the page survives navigation); otherwise the table pages itself and resets
@@ -47,7 +47,6 @@ function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md', page:
               <th className="px-1.5 py-2 text-right font-medium text-slate-400 dark:text-slate-500">Price</th>
               <th className="px-1.5 py-2 text-right font-medium text-slate-400 dark:text-slate-500">Score</th>
               <th className="px-1.5 py-2 text-right font-medium text-slate-400 dark:text-slate-500">Conv.</th>
-              <th className="px-1.5 py-2 text-right font-medium text-slate-400 dark:text-slate-500">R:R</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -66,7 +65,6 @@ function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md', page:
                 </td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">{item.score.toFixed(2)}</td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right text-slate-500 dark:text-slate-400">{item.conviction}</td>
-                <td className="whitespace-nowrap px-1.5 py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">{item.rr_ratio.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
