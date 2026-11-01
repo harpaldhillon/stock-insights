@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from analyser import get_ticker_metadata, run_full_analysis
+from analyser import get_ticker_metadata, run_full_analysis, strategy_rules
 from database import Analysis, Price, Recommendation, SessionLocal, init_db, get_db
 from fetcher import (
     fetch_price_history,
@@ -172,6 +172,12 @@ def get_summary(
     for item in rows:
         grouped[item["signal"]].append(item)
     return {"BUY": grouped["BUY"], "HOLD": grouped["HOLD"], "SELL": grouped["SELL"]}
+
+
+@app.get("/api/strategy")
+def get_strategy():
+    """How stocks are scored and classified, for the dashboard's Strategy popup."""
+    return strategy_rules()
 
 
 @app.get("/api/stock/{ticker}", response_model=StockDetailResponse)

@@ -1,14 +1,22 @@
-import { Routes, Route, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
 import api from './api/client'
 import Dashboard, { INITIAL_DASHBOARD_STATE } from './pages/Dashboard'
 import StockDetail from './pages/StockDetail'
 import ThemeToggle from './components/ThemeToggle'
+import StrategyModal from './components/StrategyModal'
 
 const CompassIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+  </svg>
+)
+
+const StrategyIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18h6" /><path d="M10 22h4" />
+    <path d="M12 2a7 7 0 0 0-4 12.74V16h8v-1.26A7 7 0 0 0 12 2z" />
   </svg>
 )
 
@@ -23,6 +31,10 @@ function App() {
   const [refreshTick, setRefreshTick] = useState(0)
   // Owned here, not in Dashboard, so it survives visiting a stock page and coming back.
   const [dashboardState, setDashboardState] = useState(INITIAL_DASHBOARD_STATE)
+  const [strategyOpen, setStrategyOpen] = useState(false)
+  const closeStrategy = useCallback(() => setStrategyOpen(false), [])
+  // The strategy explains the dashboard's filters, so it only belongs on the dashboard.
+  const onDashboard = useLocation().pathname === '/'
 
   const fetchStatus = async () => {
     const r = await api.get('/api/status')
@@ -123,6 +135,16 @@ function App() {
             </span>
             <span className="hidden h-6 w-px bg-slate-200 dark:bg-slate-800 sm:inline-block" />
             <ThemeToggle />
+            {onDashboard && (
+              <button
+                onClick={() => setStrategyOpen(true)}
+                title="How stocks are selected for the current filters"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+              >
+                <StrategyIcon />
+                <span className="hidden sm:inline">Strategy</span>
+              </button>
+            )}
             <button
               onClick={onRefresh}
               disabled={refreshing}
@@ -150,6 +172,10 @@ function App() {
           <Route path="/stock/:ticker" element={<StockDetail />} />
         </Routes>
       </main>
+
+      {strategyOpen && onDashboard && (
+        <StrategyModal onClose={closeStrategy} dashboardState={dashboardState} status={status} />
+      )}
 
       <footer className="mt-8 border-t border-slate-200 py-5 text-center text-xs text-slate-400 dark:border-slate-800 dark:text-slate-600">
         Data refreshes daily after UK market close · For educational purposes only — not financial advice.

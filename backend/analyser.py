@@ -362,3 +362,50 @@ def run_full_analysis(db: Session) -> tuple[int, int]:
             logger.exception("Analysis failed for %s: %s", ticker, err)
             continue
     return success, total
+
+
+# ---------------------------------------------------------------------------
+# Strategy description for the UI — built from the constants above so the
+# explanation shown to users can never drift from the scoring actually applied.
+# ---------------------------------------------------------------------------
+
+def _pts(value: float) -> str:
+    return f"{value:+g}".replace("-", "\u2212")
+
+
+def strategy_rules() -> dict:
+    rules = [
+        ("Trend", "Close above the 200-day SMA (long-term uptrend)", f"{_pts(SCORE_ABOVE_SMA200)} / {_pts(-SCORE_ABOVE_SMA200)} if below"),
+        ("Trend", "Close above the 50-day SMA (medium-term uptrend)", f"{_pts(SCORE_ABOVE_SMA50)} / {_pts(-SCORE_ABOVE_SMA50)} if below"),
+        ("Trend", "50-day SMA above the 200-day SMA", f"{_pts(SCORE_SMA50_ABOVE_SMA200)} / {_pts(-SCORE_SMA50_ABOVE_SMA200)} if below"),
+        ("Trend", "Close above the 20-day EMA (short-term trend)", f"{_pts(SCORE_ABOVE_EMA20)} / {_pts(-SCORE_ABOVE_EMA20)} if below"),
+        ("Momentum", f"RSI(14) in the healthy {RSI_HEALTHY_LOW}\u2013{RSI_HEALTHY_HIGH} range", _pts(SCORE_RSI_HEALTHY)),
+        ("Momentum", f"RSI(14) strong, {RSI_HEALTHY_HIGH}\u2013{RSI_OVERBOUGHT}", _pts(SCORE_RSI_STRONG)),
+        ("Momentum", f"RSI(14) overbought, above {RSI_OVERBOUGHT}", _pts(-SCORE_RSI_OVERBOUGHT_PENALTY)),
+        ("Momentum", f"RSI(14) oversold, below {RSI_OVERSOLD}", _pts(-SCORE_RSI_OVERSOLD_PENALTY)),
+        ("Momentum", "MACD above its signal line with a positive histogram", f"{_pts(SCORE_MACD_ALIGNED)} / {_pts(-SCORE_MACD_ALIGNED)} if both bearish"),
+        ("Momentum", "MACD histogram rising versus the previous day", f"{_pts(SCORE_MACD_HIST_RISING)} / {_pts(-SCORE_MACD_HIST_RISING)} if falling"),
+        ("Volume", "5-day average volume above the 20-day average", f"{_pts(SCORE_VOLUME_RISING)} / {_pts(-SCORE_VOLUME_FALLING_PENALTY)} if not"),
+        ("Volume", "Up day on above-average volume", _pts(SCORE_VOLUME_CONFIRMS_MOVE)),
+        ("Volatility", f"ATR(14) below {ATR_PCT_LOW:g}% of price (calm)", _pts(SCORE_LOW_VOLATILITY)),
+        ("Volatility", f"ATR(14) above {ATR_PCT_HIGH:g}% of price (volatile)", _pts(-SCORE_HIGH_VOLATILITY_PENALTY)),
+        ("Volatility", "Close in the lower half of the Bollinger Bands (room to run)", _pts(SCORE_NEAR_LOWER_BAND)),
+        ("Volatility", "Close above the upper Bollinger Band (stretched)", _pts(-SCORE_ABOVE_UPPER_BAND_PENALTY)),
+        ("Volatility", "Bollinger Bands narrowing (squeeze)", _pts(SCORE_BANDS_TIGHTENING)),
+    ]
+    return {
+        "rules": [{"group": g, "rule": r, "points": p} for g, r, p in rules],
+        "signal_threshold": SIGNAL_THRESHOLD,
+        "conviction_high_threshold": CONVICTION_HIGH_THRESHOLD,
+        "highs": {
+            "tolerance_pct": AT_52W_HIGH_TOLERANCE_PCT,
+            "recent_days": BREAKOUT_RECENT_DAYS,
+            "multi_year_min_years": MULTI_YEAR_MIN_YEARS,
+        },
+        "trade_levels": {
+            "entry_zone_pct": round((ENTRY_ZONE_HIGH_MULTIPLIER - 1.0) * 100, 2),
+            "stop_atr": STOP_LOSS_ATR_MULTIPLIER,
+            "target_atr": TARGET_ATR_MULTIPLIER,
+            "score_divisor": SCORE_NORMALIZATION_DIVISOR,
+        },
+    }

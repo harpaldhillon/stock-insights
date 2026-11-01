@@ -2,15 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import SignalPanel from '../components/SignalPanel'
+import { HIGHS_FILTERS, matchesHighs, matchesSearch, matchesSector } from '../lib/filters'
 
 const indexOptions = ['ALL', 'FTSE100', 'FTSE250', 'FTSE SmallCap']
-// Client-side "Highs" filter over analysis.notes.highs (computed by the analyser).
-const HIGHS_FILTERS = {
-  '':    () => true,
-  '52w': (item) => !!item.notes?.highs?.at_52w_high,
-  multi: (item) => !!item.notes?.highs?.multi_year_breakout,
-}
-
 const sortOptions = [
   { value: 'score_desc', label: 'Score (high → low)' },
   { value: 'score_asc',  label: 'Score (low → high)' },
@@ -96,7 +90,7 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
 
   // Counts shown in the Highs dropdown, within the currently selected sector.
   const highsCounts = useMemo(() => {
-    const inSector = allItems.filter((item) => !filters.sector || item.sector === filters.sector)
+    const inSector = allItems.filter((item) => matchesSector(item, filters.sector))
     return {
       '52w': inSector.filter(HIGHS_FILTERS['52w']).length,
       multi: inSector.filter(HIGHS_FILTERS.multi).length,
@@ -106,8 +100,7 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
   const sectorFilteredSummary = useMemo(() => {
     if (!summary) return null
     if (!filters.sector && !filters.highs) return summary
-    const highsMatch = HIGHS_FILTERS[filters.highs] || HIGHS_FILTERS['']
-    const match = (item) => (!filters.sector || item.sector === filters.sector) && highsMatch(item)
+    const match = (item) => matchesSector(item, filters.sector) && matchesHighs(item, filters.highs)
     return { BUY: summary.BUY.filter(match), HOLD: summary.HOLD.filter(match), SELL: summary.SELL.filter(match) }
   }, [summary, filters.sector, filters.highs])
 
@@ -130,11 +123,8 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
 
   const filteredSummary = useMemo(() => {
     if (!sectorFilteredSummary) return null
-    const q = search.trim().toLowerCase()
-    if (!q) return sectorFilteredSummary
-    const match = (item) =>
-      item.ticker.toLowerCase().includes(q) ||
-      item.name.toLowerCase().includes(q)
+    if (!search.trim()) return sectorFilteredSummary
+    const match = (item) => matchesSearch(item, search)
     return {
       BUY: sectorFilteredSummary.BUY.filter(match),
       HOLD: sectorFilteredSummary.HOLD.filter(match),

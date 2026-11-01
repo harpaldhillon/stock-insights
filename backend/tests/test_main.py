@@ -253,3 +253,20 @@ def test_manual_refresh_starts_job(monkeypatch, client_env):
     assert body["status"] == "started"
     assert body["job_id"]
     time.sleep(0.05)
+
+
+# ---- /api/strategy --------------------------------------------------
+
+def test_get_strategy_reflects_analyser_constants(client_env):
+    import analyser
+    client, _ = client_env
+    resp = client.get("/api/strategy")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["signal_threshold"] == analyser.SIGNAL_THRESHOLD
+    assert body["highs"]["multi_year_min_years"] == analyser.MULTI_YEAR_MIN_YEARS
+    assert body["trade_levels"]["stop_atr"] == analyser.STOP_LOSS_ATR_MULTIPLIER
+    groups = {r["group"] for r in body["rules"]}
+    assert groups == {"Trend", "Momentum", "Volume", "Volatility"}
+    sma200 = next(r for r in body["rules"] if "200-day SMA (long-term" in r["rule"])
+    assert sma200["points"].startswith(f"+{analyser.SCORE_ABOVE_SMA200:g}")
