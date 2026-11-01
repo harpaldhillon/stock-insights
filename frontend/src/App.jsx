@@ -121,7 +121,7 @@ function App() {
                 </span>
               </div>
               <p className="truncate text-sm text-slate-400 dark:text-slate-500">
-                Technical signals for the FTSE 100 &amp; 250
+                Technical signals for UK stocks
               </p>
             </div>
           </Link>
