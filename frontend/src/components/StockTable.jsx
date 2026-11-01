@@ -6,11 +6,18 @@ const COL_WIDTHS    = ['w-[17%]', 'w-[19%]', 'w-[20%]', 'w-[14%]', 'w-[16%]', 'w
 // Expanded view: give the company name most of the extra width so it isn't truncated.
 const COL_WIDTHS_LG = ['w-[10%]', 'w-[42%]', 'w-[13%]', 'w-[11%]', 'w-[12%]', 'w-[12%]']
 
-function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md' }) {
-  const [page, setPage] = useState(0)
-
-  // Reset to first page whenever the data changes (filter/sort)
-  useEffect(() => { setPage(0) }, [rows])
+// Pass page/onPageChange to control paging from outside (the dashboard does, so
+// the page survives navigation); otherwise the table pages itself and resets
+// to the first page whenever the rows change.
+function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md', page: controlledPage, onPageChange }) {
+  const controlled = onPageChange !== undefined
+  const [ownPage, setOwnPage] = useState(0)
+  useEffect(() => { if (!controlled) setOwnPage(0) }, [rows, controlled])
+  const requestedPage = controlled ? controlledPage : ownPage
+  const setPage = (next) => {
+    const value = typeof next === 'function' ? next(page) : next
+    controlled ? onPageChange(value) : setOwnPage(value)
+  }
 
   if (!rows || rows.length === 0) {
     return (
@@ -21,6 +28,8 @@ function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md' }) {
   }
 
   const totalPages = Math.ceil(rows.length / pageSize)
+  // Clamp: a remembered page can be past the end after a data refresh shrinks the list.
+  const page = Math.min(requestedPage, totalPages - 1)
   const pageRows   = rows.slice(page * pageSize, (page + 1) * pageSize)
 
   return (

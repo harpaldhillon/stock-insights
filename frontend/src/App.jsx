@@ -1,7 +1,7 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import api from './api/client'
-import Dashboard from './pages/Dashboard'
+import Dashboard, { INITIAL_DASHBOARD_STATE } from './pages/Dashboard'
 import StockDetail from './pages/StockDetail'
 import ThemeToggle from './components/ThemeToggle'
 
@@ -21,6 +21,8 @@ function App() {
   const [status, setStatus] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
+  // Owned here, not in Dashboard, so it survives visiting a stock page and coming back.
+  const [dashboardState, setDashboardState] = useState(INITIAL_DASHBOARD_STATE)
 
   const fetchStatus = async () => {
     const r = await api.get('/api/status')
@@ -144,7 +146,7 @@ function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <Routes>
-          <Route path="/" element={<Dashboard status={status} refreshTick={refreshTick} />} />
+          <Route path="/" element={<Dashboard status={status} refreshTick={refreshTick} state={dashboardState} setState={setDashboardState} />} />
           <Route path="/stock/:ticker" element={<StockDetail />} />
         </Routes>
       </main>

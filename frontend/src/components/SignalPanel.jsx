@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import StockTable from './StockTable'
 import SignalBadge from './SignalBadge'
 
@@ -36,14 +36,16 @@ const CloseIcon = () => (
   </svg>
 )
 
-function SignalPanel({ signal, rows, onRowClick }) {
-  const [expanded, setExpanded] = useState(false)
+// Fully controlled: the dashboard owns `expanded` and `page` so both survive
+// navigating to a stock page and back.
+function SignalPanel({ signal, rows, onRowClick, expanded, onExpandedChange, page, onPageChange }) {
   const theme = THEMES[signal]
+  const setExpanded = (open) => onExpandedChange(open)
 
   // While expanded: close on Esc and stop the page behind the overlay from scrolling.
   useEffect(() => {
     if (!expanded) return
-    const onKey = (e) => { if (e.key === 'Escape') setExpanded(false) }
+    const onKey = (e) => { if (e.key === 'Escape') onExpandedChange(false) }
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
@@ -61,7 +63,7 @@ function SignalPanel({ signal, rows, onRowClick }) {
       <div className="flex items-center gap-2">
         <SignalBadge signal={signal} />
         <button
-          onClick={() => setExpanded((v) => !v)}
+          onClick={() => setExpanded(!expanded)}
           aria-label={expanded ? `Close full-screen ${signal} view` : `Expand ${signal} to full screen`}
           title={expanded ? 'Close (Esc)' : 'Expand to full screen'}
           className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${theme.button}`}
@@ -82,7 +84,7 @@ function SignalPanel({ signal, rows, onRowClick }) {
       >
         {header}
         <div className="flex-1 overflow-auto p-4 sm:p-6">
-          <StockTable rows={rows} onRowClick={onRowClick} pageSize={50} size="lg" />
+          <StockTable rows={rows} onRowClick={onRowClick} pageSize={50} size="lg" page={page} onPageChange={onPageChange} />
         </div>
       </div>
     )
@@ -92,7 +94,7 @@ function SignalPanel({ signal, rows, onRowClick }) {
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       {header}
       <div className="p-3">
-        <StockTable rows={rows} onRowClick={onRowClick} />
+        <StockTable rows={rows} onRowClick={onRowClick} page={page} onPageChange={onPageChange} />
       </div>
     </div>
   )

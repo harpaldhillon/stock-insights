@@ -26,27 +26,45 @@ function StatPill({ label, value, colorClass }) {
   )
 }
 
-function Dashboard({ status, refreshTick = 0 }) {
+// Dashboard state lives in App (passed in as state/setState) rather than here,
+// so filters, fetched rows, table pages and the expanded panel all survive
+// navigating to a stock page and back.
+export const INITIAL_DASHBOARD_STATE = {
+  filters: { index: 'ALL', sector: '', highs: '', sort: 'score_desc' },
+  search: '',
+  summary: null,
+  fetchedKey: null,   // which index/sort/refreshTick `summary` was fetched for
+  pages: {},          // table page per panel, e.g. { BUY: 2, 'BUY-lg': 0 }
+  expanded: null,     // 'BUY' | 'HOLD' | 'SELL' while a panel is full screen
+}
+
+function Dashboard({ status, refreshTick = 0, state, setState }) {
   const navigate = useNavigate()
-  const [summary, setSummary] = useState(null)
-  const [filters, setFilters] = useState({ index: 'ALL', sector: '', highs: '', sort: 'score_desc' })
-  const [search,  setSearch]  = useState('')
-  const [loading, setLoading] = useState(true)
+  const { filters, search, summary, fetchedKey, pages, expanded } = state
+  const [loading, setLoading] = useState(false)
 
-  // Re-fetches on mount, when index/sort change, and when the header's Refresh
-  // button confirms a background refresh has actually finished (refreshTick).
-  // Sector is deliberately NOT sent to the backend — see sectorFilteredSummary
-  // below for why it's applied client-side instead.
+  const update = (patch) =>
+    setState((s) => ({ ...s, ...(typeof patch === 'function' ? patch(s) : patch) }))
+  // Any filter or search change starts every table back on its first page.
+  const setFilters = (fn) => update((s) => ({ filters: fn(s.filters), pages: {} }))
+  const setSearch  = (value) => update({ search: value, pages: {} })
+
+  // Only index and sort are sent to the backend, so only they (or a finished
+  // Refresh, via refreshTick) need new rows. Coming back to this page with the
+  // same key reuses the rows already fetched. Sector, Highs and Search filter
+  // client-side — see sectorFilteredSummary below.
+  const summaryKey = `${filters.index}|${filters.sort}|${refreshTick}`
   useEffect(() => {
-    fetchSummary()
-  }, [filters.index, filters.sort, refreshTick])
+    if (summary && fetchedKey === summaryKey) return
+    fetchSummary(summaryKey)
+  }, [summaryKey])
 
-  const fetchSummary = async () => {
+  const fetchSummary = async (key) => {
     setLoading(true)
     try {
       const params = { index: filters.index, sort: filters.sort }
       const response = await api.get('/api/summary', { params })
-      setSummary(response.data)
+      update({ summary: response.data, fetchedKey: key })
     } catch (error) {
       console.error(error)
     } finally {
@@ -237,7 +255,7 @@ function Dashboard({ status, refreshTick = 0 }) {
       </div>
 
       {/* Signal columns */}
-      {loading ? (
+      {loading || !summary ? (
         <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white py-16 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-center">
             <svg className="mx-auto animate-spin text-sky-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
@@ -247,14 +265,23 @@ function Dashboard({ status, refreshTick = 0 }) {
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {['BUY', 'HOLD', 'SELL'].map((signal) => (
-            <SignalPanel
-              key={signal}
-              signal={signal}
-              rows={filteredSummary?.[signal] || []}
-              onRowClick={(ticker) => navigate(`/stock/${ticker}`)}
-            />
-          ))}
+          {['BUY', 'HOLD', 'SELL'].map((signal) => {
+            const isExpanded = expanded === signal
+            // Separate page per view: the expanded table shows 50 rows/page, the panel 25.
+            const pageKey = isExpanded ? `${signal}-lg` : signal
+            return (
+              <SignalPanel
+                key={signal}
+                signal={signal}
+                rows={filteredSummary?.[signal] || []}
+                onRowClick={(ticker) => navigate(`/stock/${ticker}`)}
+                expanded={isExpanded}
+                onExpandedChange={(open) => update({ expanded: open ? signal : null })}
+                page={pages[pageKey] || 0}
+                onPageChange={(p) => update((s) => ({ pages: { ...s.pages, [pageKey]: p } }))}
+              />
+            )
+          })}
         </div>
       )}
     </div>
