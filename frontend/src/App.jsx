@@ -23,6 +23,15 @@ const StrategyIcon = () => (
 const POLL_INTERVAL_MS = 3000
 const MAX_POLL_ATTEMPTS = 200 // ~10 minutes at 3s intervals — a full refresh over ~500 tickers can take several minutes
 
+const NOTICE_MS = 6000
+
+// The backend sends naive UTC timestamps (no "Z"); without one, the browser
+// would read them as local time and be an hour out during British Summer Time.
+const parseUtc = (iso) => new Date(/[zZ]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`)
+
+const formatTime = (iso) =>
+  parseUtc(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function App() {
@@ -32,6 +41,13 @@ function App() {
   // Owned here, not in Dashboard, so it survives visiting a stock page and coming back.
   const [dashboardState, setDashboardState] = useState(INITIAL_DASHBOARD_STATE)
   const [strategyOpen, setStrategyOpen] = useState(false)
+  // Short-lived message next to the Refresh button, e.g. "Already up to date".
+  const [notice, setNotice] = useState(null)
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => clearTimeout(t)
+  }, [notice])
   const closeStrategy = useCallback(() => setStrategyOpen(false), [])
   // The strategy explains the dashboard's filters, so it only belongs on the dashboard.
   const onDashboard = useLocation().pathname === '/'
@@ -86,8 +102,14 @@ function App() {
   const onRefresh = async () => {
     if (refreshing) return
     setRefreshing(true)
+    setNotice(null)
     try {
-      await api.get('/api/refresh')
+      const { data } = await api.get('/api/refresh')
+      // The backend refreshes at most once per UK day from this button.
+      if (data.status === 'already_refreshed_today') {
+        setNotice(`Already up to date: data was refreshed today at ${formatTime(data.last_updated)}`)
+        return
+      }
       await pollUntilIdle()
     } catch (err) {
       console.error(err)
@@ -99,7 +121,7 @@ function App() {
   const statusLabel = refreshing
     ? 'Refreshing…'
     : status?.last_updated
-      ? `Updated ${new Date(status.last_updated).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+      ? `Updated ${parseUtc(status.last_updated).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
       : 'Loading…'
 
   return (
@@ -133,6 +155,11 @@ function App() {
             >
               {statusLabel}
             </span>
+            {notice && (
+              <span role="status" className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+                {notice}
+              </span>
+            )}
             <span className="hidden h-6 w-px bg-slate-200 dark:bg-slate-800 sm:inline-block" />
             <ThemeToggle />
             {onDashboard && (

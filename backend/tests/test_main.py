@@ -1,5 +1,5 @@
 import time
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -340,3 +340,45 @@ def test_profile_unknown_ticker_404(client_env):
     client, _ = client_env
     assert client.get("/api/stock/NOPE.L/profile").status_code == 404
 
+
+def test_manual_refresh_skipped_when_refreshed_today(monkeypatch, client_env):
+    client, session = client_env
+    started = []
+    monkeypatch.setattr(main, "refresh_all_data", lambda: started.append(1))
+    session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow()))
+    session.commit()
+    resp = client.get("/api/refresh")
+    assert resp.json()["status"] == "already_refreshed_today"
+    assert resp.json()["last_updated"] is not None
+    assert started == []
+
+
+def test_manual_refresh_runs_when_last_refresh_was_before_today(monkeypatch, client_env):
+    client, session = client_env
+    monkeypatch.setattr(main, "refresh_all_data", lambda: None)
+    session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow() - timedelta(days=2)))
+    session.commit()
+    assert client.get("/api/refresh").json()["status"] == "started"
+
+
+def test_manual_refresh_force_overrides_same_day_skip(monkeypatch, client_env):
+    client, session = client_env
+    monkeypatch.setattr(main, "refresh_all_data", lambda: None)
+    session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow()))
+    session.commit()
+    assert client.get("/api/refresh", params={"force": "true"}).json()["status"] == "started"
+
+
+def test_refreshed_today_uses_uk_calendar_date():
+    # 23:30 UTC on 30 Jun is 00:30 BST on 1 Jul in the UK, so "today" there.
+    assert main.refreshed_today(datetime(2026, 6, 30, 23, 30), now_utc=datetime(2026, 7, 1, 9, 0)) is True
+    assert main.refreshed_today(datetime(2026, 6, 30, 22, 30), now_utc=datetime(2026, 7, 1, 9, 0)) is False
+    assert main.refreshed_today(None) is False
+
+
+def test_status_last_updated_falls_back_to_database(client_env):
+    client, session = client_env
+    run = datetime(2026, 11, 1, 18, 45)
+    session.add(_make_analysis("AAL.L", "BUY", run_date=run))
+    session.commit()
+    assert client.get("/api/status").json()["last_updated"] == run.isoformat()

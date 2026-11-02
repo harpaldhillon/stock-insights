@@ -1,7 +1,8 @@
 import logging
 import threading
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -79,6 +80,24 @@ def refresh_all_data() -> None:
         app.state.initializing = False
 
 
+MARKET_TZ = ZoneInfo("Europe/London")  # same timezone the daily schedule runs in
+
+
+def last_refresh_time(db: Session) -> datetime | None:
+    """When data was last refreshed (UTC). Read from the newest analysis row so
+    it survives restarts, unlike the in-memory app.state.last_updated."""
+    return db.query(func.max(Analysis.run_date)).scalar()
+
+
+def refreshed_today(last_utc: datetime | None, now_utc: datetime | None = None) -> bool:
+    """Whether the last refresh happened on today's UK calendar date."""
+    if last_utc is None:
+        return False
+    now_utc = now_utc or datetime.utcnow()
+    to_uk = lambda dt: dt.replace(tzinfo=timezone.utc).astimezone(MARKET_TZ).date()
+    return to_uk(last_utc) == to_uk(now_utc)
+
+
 @app.on_event("startup")
 async def startup_event():
     init_db()
@@ -98,7 +117,7 @@ def get_status(db: Session = Depends(get_db)):
     hold = db.query(func.count(Analysis.id)).filter(Analysis.signal == "HOLD").scalar() or 0
     sell = db.query(func.count(Analysis.id)).filter(Analysis.signal == "SELL").scalar() or 0
     return {
-        "last_updated": app.state.last_updated,
+        "last_updated": app.state.last_updated or last_refresh_time(db),
         "total_stocks": total,
         "buy_count": buy,
         "hold_count": hold,
@@ -237,9 +256,16 @@ def get_stock_detail(ticker: str, db: Session = Depends(get_db)):
 
 
 @app.get("/api/refresh")
-def manual_refresh():
+def manual_refresh(force: bool = False, db: Session = Depends(get_db)):
+    """Start a refresh, unless one is running or data was already refreshed
+    today (UK date). Prices are fetched up to the previous close, so a second
+    same-day refresh would only re-download identical data. force=true overrides.
+    The scheduled 18:30 refresh does not go through here and always runs."""
     if app.state.running_refresh:
         return {"job_id": app.state.refresh_job_id, "status": "already_running"}
+    last = last_refresh_time(db)
+    if not force and refreshed_today(last):
+        return {"job_id": None, "status": "already_refreshed_today", "last_updated": last}
     job_id = str(uuid.uuid4())
     app.state.refresh_job_id = job_id
     thread = threading.Thread(target=refresh_all_data, daemon=True)
