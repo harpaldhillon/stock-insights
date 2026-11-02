@@ -1,7 +1,7 @@
 import logging
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -10,8 +10,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from analyser import get_ticker_metadata, run_full_analysis, strategy_rules
-from database import Analysis, Price, Recommendation, SessionLocal, init_db, get_db
+from database import Analysis, CompanyProfile, Price, Recommendation, SessionLocal, init_db, get_db
 from fetcher import (
+    fetch_company_profile,
     fetch_price_history,
     fetch_recommendations,
     save_price_history,
@@ -19,7 +20,7 @@ from fetcher import (
     load_all_ticker_metadata,
 )
 from scheduler import init_scheduler
-from schemas import PricePoint, RecommendationPeriod, StatusResponse, StockDetailResponse
+from schemas import CompanyProfileResponse, PricePoint, RecommendationPeriod, StatusResponse, StockDetailResponse
 from tickers import TICKERS_BY_INDEX, TICKERS_BY_SECTOR
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -178,6 +179,33 @@ def get_summary(
 def get_strategy():
     """How stocks are scored and classified, for the dashboard's Strategy popup."""
     return strategy_rules()
+
+
+PROFILE_MAX_AGE = timedelta(days=30)
+
+
+@app.get("/api/stock/{ticker}/profile", response_model=CompanyProfileResponse)
+def get_company_profile(ticker: str, db: Session = Depends(get_db)):
+    """What the company does. Fetched from Yahoo on first request, then cached
+    for PROFILE_MAX_AGE; if a re-fetch fails the stale copy is still served."""
+    ticker = ticker.upper()
+    if not get_ticker_metadata(ticker):
+        raise HTTPException(status_code=404, detail="Ticker not found")
+
+    cached = db.get(CompanyProfile, ticker)
+    if cached and datetime.utcnow() - cached.fetched_at < PROFILE_MAX_AGE:
+        return cached
+
+    fresh = fetch_company_profile(ticker)
+    if fresh is None:
+        return cached or CompanyProfileResponse(ticker=ticker)
+    profile = cached or CompanyProfile(ticker=ticker)
+    for field, value in fresh.items():
+        setattr(profile, field, value)
+    profile.fetched_at = datetime.utcnow()
+    db.add(profile)
+    db.commit()
+    return profile
 
 
 @app.get("/api/stock/{ticker}", response_model=StockDetailResponse)

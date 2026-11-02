@@ -286,3 +286,57 @@ def test_summary_nasdaq100_filter(client_env):
     assert [r["ticker"] for r in body["BUY"]] == ["NVDA"]
     assert [r["ticker"] for r in body["HOLD"]] == ["AAPL"]
     assert body["BUY"][0]["index"] == "NASDAQ100"
+
+
+# ---- /api/stock/{ticker}/profile ------------------------------------------
+
+def _profile(summary="Makes chips."):
+    return {"summary": summary, "industry": "Semiconductors", "website": "https://x.com",
+            "city": "Santa Clara", "country": "United States", "employees": 42000}
+
+
+def test_profile_fetches_then_serves_from_cache(client_env, monkeypatch):
+    client, _ = client_env
+    calls = []
+    monkeypatch.setattr(main, "fetch_company_profile", lambda t: calls.append(t) or _profile())
+    first = client.get("/api/stock/nvda/profile")
+    second = client.get("/api/stock/NVDA/profile")
+    assert first.status_code == second.status_code == 200
+    assert first.json()["summary"] == "Makes chips."
+    assert first.json()["employees"] == 42000
+    assert second.json() == first.json()
+    assert calls == ["NVDA"]  # second request served from the cache
+
+
+def test_profile_refetches_when_stale(client_env, monkeypatch):
+    from datetime import datetime, timedelta
+    from database import CompanyProfile
+    client, session = client_env
+    session.add(CompanyProfile(ticker="NVDA", summary="Old.", fetched_at=datetime.utcnow() - timedelta(days=31)))
+    session.commit()
+    monkeypatch.setattr(main, "fetch_company_profile", lambda t: _profile("New."))
+    assert client.get("/api/stock/NVDA/profile").json()["summary"] == "New."
+
+
+def test_profile_serves_stale_copy_when_refetch_fails(client_env, monkeypatch):
+    from datetime import datetime, timedelta
+    from database import CompanyProfile
+    client, session = client_env
+    session.add(CompanyProfile(ticker="NVDA", summary="Old.", fetched_at=datetime.utcnow() - timedelta(days=31)))
+    session.commit()
+    monkeypatch.setattr(main, "fetch_company_profile", lambda t: None)
+    assert client.get("/api/stock/NVDA/profile").json()["summary"] == "Old."
+
+
+def test_profile_unavailable_returns_empty(client_env, monkeypatch):
+    client, _ = client_env
+    monkeypatch.setattr(main, "fetch_company_profile", lambda t: None)
+    resp = client.get("/api/stock/NVDA/profile")
+    assert resp.status_code == 200
+    assert resp.json()["summary"] is None
+
+
+def test_profile_unknown_ticker_404(client_env):
+    client, _ = client_env
+    assert client.get("/api/stock/NOPE.L/profile").status_code == 404
+

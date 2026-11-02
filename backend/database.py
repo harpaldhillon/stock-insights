@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import (
     Column,
+    Text,
     Date,
     DateTime,
     Float,
@@ -38,6 +39,20 @@ class Price(Base):
         # main.py's get_summary) without a full table scan.
         Index("ix_prices_ticker_date", "ticker", "date"),
     )
+
+
+class CompanyProfile(Base):
+    """Company description from Yahoo Finance, fetched on first view and cached."""
+    __tablename__ = "company_profiles"
+
+    ticker = Column(String, primary_key=True)
+    summary = Column(Text, nullable=True)
+    industry = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    employees = Column(Integer, nullable=True)
+    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class Recommendation(Base):

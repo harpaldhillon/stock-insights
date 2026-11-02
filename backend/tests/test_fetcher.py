@@ -3,6 +3,7 @@ import pytest
 
 from database import Price, Recommendation
 from fetcher import (
+    fetch_company_profile,
     fetch_price_history,
     fetch_recommendations,
     load_all_ticker_metadata,
@@ -158,3 +159,36 @@ def test_load_all_ticker_metadata():
     assert tickers is ALL_TICKERS
     assert len(tickers) > 0
     assert {"ticker", "name", "sector", "index"}.issubset(tickers[0].keys())
+
+
+class _FakeInfoTicker:
+    def __init__(self, info):
+        self.info = info
+
+
+def test_fetch_company_profile_maps_fields(monkeypatch):
+    info = {
+        "longBusinessSummary": "  NVIDIA designs GPUs.  ", "industry": "Semiconductors",
+        "website": "https://www.nvidia.com", "city": "Santa Clara",
+        "country": "United States", "fullTimeEmployees": 42000, "unrelated": 1,
+    }
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda t: _FakeInfoTicker(info))
+    assert fetch_company_profile("NVDA") == {
+        "summary": "NVIDIA designs GPUs.", "industry": "Semiconductors",
+        "website": "https://www.nvidia.com", "city": "Santa Clara",
+        "country": "United States", "employees": 42000,
+    }
+
+
+def test_fetch_company_profile_empty_info_returns_none(monkeypatch):
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda t: _FakeInfoTicker({"quoteType": "EQUITY"}))
+    assert fetch_company_profile("NVDA") is None
+
+
+def test_fetch_company_profile_exception_returns_none(monkeypatch):
+    class Boom:
+        @property
+        def info(self):
+            raise RuntimeError("rate limited")
+    monkeypatch.setattr("fetcher.yf.Ticker", lambda t: Boom())
+    assert fetch_company_profile("NVDA") is None

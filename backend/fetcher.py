@@ -91,5 +91,27 @@ def save_recommendations(db: Session, ticker: str, df: pd.DataFrame) -> None:
     db.commit()
 
 
+def fetch_company_profile(ticker: str) -> dict | None:
+    """Business description and basic facts for a company, or None if unavailable."""
+    try:
+        info = yf.Ticker(ticker).info or {}
+    except Exception as err:
+        logger.exception("Failed to fetch company profile for %s: %s", ticker, err)
+        return None
+    employees = info.get("fullTimeEmployees")
+    profile = {
+        "summary": (info.get("longBusinessSummary") or "").strip() or None,
+        "industry": info.get("industry") or None,
+        "website": info.get("website") or None,
+        "city": info.get("city") or None,
+        "country": info.get("country") or None,
+        "employees": int(employees) if isinstance(employees, (int, float)) else None,
+    }
+    if not any(profile.values()):
+        logger.warning("No company profile returned for %s", ticker)
+        return None
+    return profile
+
+
 def load_all_ticker_metadata() -> list[dict]:
     return ALL_TICKERS

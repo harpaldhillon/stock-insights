@@ -12,6 +12,7 @@ import RecommendationsChart from '../components/RecommendationsChart'
 import { highsDescription } from '../components/HighBadge'
 import StockSummary from '../components/StockSummary'
 import { formatPrice } from '../lib/format'
+import CompanyProfile from '../components/CompanyProfile'
 
 
 function consensusFromRecommendation(rec) {
@@ -140,6 +141,7 @@ function StockDetail() {
             <SignalBadge signal={stock.analysis.signal} conviction={stock.analysis.conviction} />
           </div>
         </div>
+        <CompanyProfile ticker={stock.company.ticker} />
       </div>
 
       {/* Moving averages */}

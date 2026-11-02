@@ -73,6 +73,18 @@ class RecommendationPeriod(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CompanyProfileResponse(BaseModel):
+    ticker: str
+    summary: str | None = None
+    industry: str | None = None
+    website: str | None = None
+    city: str | None = None
+    country: str | None = None
+    employees: int | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class StockDetailResponse(BaseModel):
     company: TickerMeta
     analysis: AnalysisDetail
