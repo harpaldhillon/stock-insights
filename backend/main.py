@@ -97,7 +97,7 @@ def _refresh_body() -> None:
         logger.info("Starting full data refresh")
         with SessionLocal() as db:
             tickers = load_all_ticker_metadata()
-            fetch_success = 0
+            fetched: list[str] = []
             fetch_failed = 0
             for ticker_meta in tickers:
                 ticker = ticker_meta["ticker"]
@@ -107,15 +107,23 @@ def _refresh_body() -> None:
                     fetch_failed += 1
                     continue
                 save_price_history(db, ticker, df)
-                fetch_success += 1
+                fetched.append(ticker)
                 rec_df = fetch_recommendations(ticker)
                 if rec_df is not None and not rec_df.empty:
                     save_recommendations(db, ticker, rec_df)
-            analysis_success, analysis_total = run_full_analysis(db)
+            if not fetched:
+                # Network or Yahoo outage. Re-analysing old prices would stamp a
+                # fresh run_date and make stale data look "updated today" (and
+                # block the Refresh button), so leave everything as it was.
+                logger.error("Data refresh fetched no tickers; keeping existing analysis")
+                return
+            # Only re-analyse what was actually downloaded, so run_date (which
+            # drives "last updated") means "prices fetched", not "re-scored".
+            analysis_success, analysis_total = run_full_analysis(db, fetched)
             app.state.last_updated = datetime.utcnow()
             logger.info(
                 "Data refresh complete: fetched %s/%s tickers, analyzed %s/%s successfully",
-                fetch_success,
+                len(fetched),
                 len(tickers),
                 analysis_success,
                 analysis_total,

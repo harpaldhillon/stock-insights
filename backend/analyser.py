@@ -368,8 +368,10 @@ def analyze_ticker(db: Session, ticker: str) -> bool:
     return True
 
 
-def run_full_analysis(db: Session) -> tuple[int, int]:
-    tickers = [item["ticker"] for item in ALL_TICKERS]
+def run_full_analysis(db: Session, tickers: list[str] | None = None) -> tuple[int, int]:
+    """Analyse `tickers` (default: every tracked ticker) from stored prices."""
+    if tickers is None:
+        tickers = [item["ticker"] for item in ALL_TICKERS]
     total = len(tickers)
     success = 0
     for ticker in tickers:

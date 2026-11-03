@@ -456,3 +456,11 @@ def test_build_notes_real_world_uptrend_not_flagged():
     notes = build_notes(calculate_indicators(df))
     assert notes["golden_cross"] is False
     assert notes["pattern"] != "Golden Cross"
+
+
+def test_run_full_analysis_only_given_tickers(db_session, sample_price_df):
+    _insert_prices(db_session, "AAL.L", sample_price_df)
+    _insert_prices(db_session, "ABF.L", sample_price_df)
+    success, total = run_full_analysis(db_session, ["AAL.L"])
+    assert (success, total) == (1, 1)
+    assert db_session.query(Analysis).filter(Analysis.ticker == "ABF.L").count() == 0

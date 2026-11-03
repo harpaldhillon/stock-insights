@@ -450,3 +450,37 @@ def test_cors_rejects_other_origins(client_env):
         headers={"Origin": "http://evil.example", "Access-Control-Request-Method": "GET"},
     )
     assert "access-control-allow-origin" not in preflight.headers
+
+
+# ---- refresh body: fetch failures --------------------------------------
+
+def _patch_refresh_io(monkeypatch, session_factory, fetch):
+    analysed = []
+    monkeypatch.setattr(main, "SessionLocal", session_factory)
+    monkeypatch.setattr(main, "load_all_ticker_metadata", lambda: [{"ticker": "AAL.L"}, {"ticker": "ABF.L"}])
+    monkeypatch.setattr(main, "fetch_price_history", fetch)
+    monkeypatch.setattr(main, "save_price_history", lambda db, t, df: None)
+    monkeypatch.setattr(main, "fetch_recommendations", lambda t: None)
+    monkeypatch.setattr(main, "run_full_analysis", lambda db, tickers=None: analysed.append(tickers) or (len(tickers), len(tickers)))
+    return analysed
+
+
+def test_refresh_with_all_fetches_failing_keeps_last_updated(monkeypatch, client_env):
+    _, session = client_env
+    factory = lambda: session.__class__(bind=session.get_bind())
+    analysed = _patch_refresh_io(monkeypatch, factory, lambda t: None)
+    main.app.state.last_updated = None
+    main.refresh_all_data()
+    assert analysed == []
+    assert main.app.state.last_updated is None
+
+
+def test_refresh_analyses_only_fetched_tickers(monkeypatch, client_env):
+    import pandas as pd
+    _, session = client_env
+    factory = lambda: session.__class__(bind=session.get_bind())
+    ok = pd.DataFrame({"close": [1.0]})
+    analysed = _patch_refresh_io(monkeypatch, factory, lambda t: ok if t == "AAL.L" else None)
+    main.refresh_all_data()
+    assert analysed == [["AAL.L"]]
+    assert main.app.state.last_updated is not None
