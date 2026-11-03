@@ -51,10 +51,48 @@ app.state.running_refresh = False
 app.state.refresh_job_id = None
 
 
-def refresh_all_data() -> None:
-    if app.state.running_refresh:
-        return
+# One refresh at a time, whichever way it is started (startup, the 18:30
+# schedule, or /api/refresh). Checking app.state.running_refresh alone was a
+# race: the flag was only set inside the new thread, so two quick requests
+# could both pass the check and run two refreshes over the same rows.
+# threading.Lock (not RLock) because the request thread claims it and the
+# worker thread releases it.
+_refresh_lock = threading.Lock()
+
+
+def _claim_refresh() -> str | None:
+    """Atomically take the refresh slot; returns a job id, or None if taken."""
+    if not _refresh_lock.acquire(blocking=False):
+        return None
+    job_id = str(uuid.uuid4())
     app.state.running_refresh = True
+    app.state.refresh_job_id = job_id
+    return job_id
+
+
+def _release_refresh() -> None:
+    app.state.running_refresh = False
+    app.state.initializing = False
+    _refresh_lock.release()
+
+
+def _run_claimed_refresh() -> None:
+    try:
+        _refresh_body()
+    finally:
+        _release_refresh()
+
+
+def refresh_all_data() -> None:
+    """Run a refresh in the calling thread (startup and the daily schedule),
+    or do nothing if one is already running."""
+    if _claim_refresh() is None:
+        logger.info("Refresh already running; skipping this one")
+        return
+    _run_claimed_refresh()
+
+
+def _refresh_body() -> None:
     try:
         logger.info("Starting full data refresh")
         with SessionLocal() as db:
@@ -84,9 +122,6 @@ def refresh_all_data() -> None:
             )
     except Exception as exc:
         logger.exception("Error during refresh: %s", exc)
-    finally:
-        app.state.running_refresh = False
-        app.state.initializing = False
 
 
 MARKET_TZ = ZoneInfo("Europe/London")  # same timezone the daily schedule runs in
@@ -270,15 +305,14 @@ def manual_refresh(force: bool = False, db: Session = Depends(get_db)):
     today (UK date). Prices are fetched up to the previous close, so a second
     same-day refresh would only re-download identical data. force=true overrides.
     The scheduled 18:30 refresh does not go through here and always runs."""
-    if app.state.running_refresh:
+    job_id = _claim_refresh()
+    if job_id is None:
         return {"job_id": app.state.refresh_job_id, "status": "already_running"}
     last = last_refresh_time(db)
     if not force and refreshed_today(last):
+        _release_refresh()
         return {"job_id": None, "status": "already_refreshed_today", "last_updated": last}
-    job_id = str(uuid.uuid4())
-    app.state.refresh_job_id = job_id
-    thread = threading.Thread(target=refresh_all_data, daemon=True)
-    thread.start()
+    threading.Thread(target=_run_claimed_refresh, daemon=True).start()
     return {"job_id": job_id, "status": "started"}
 
 

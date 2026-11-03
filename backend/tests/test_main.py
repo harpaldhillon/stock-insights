@@ -51,6 +51,9 @@ def client_env():
     finally:
         session.close()
         main.app.dependency_overrides.clear()
+        # A refresh thread started by a test must finish before the next test.
+        assert main._refresh_lock.acquire(timeout=5), "refresh lock still held after test"
+        main._refresh_lock.release()
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
 
@@ -237,15 +240,60 @@ def test_get_stock_detail_no_analysis_yet_404(client_env):
 
 def test_manual_refresh_returns_already_running(client_env):
     client, _ = client_env
-    main.app.state.running_refresh = True
-    resp = client.get("/api/refresh")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "already_running"
+    job_id = main._claim_refresh()  # e.g. the startup or 18:30 refresh is running
+    try:
+        resp = client.get("/api/refresh")
+        assert resp.status_code == 200
+        assert resp.json() == {"job_id": job_id, "status": "already_running"}
+    finally:
+        main._release_refresh()
+
+
+def test_manual_refresh_concurrent_requests_start_only_one(monkeypatch, client_env):
+    import threading
+    client, _ = client_env
+    release = threading.Event()
+    runs = []
+    def slow_body():
+        runs.append(1)
+        release.wait(5)
+    monkeypatch.setattr(main, "_refresh_body", slow_body)
+    first = client.get("/api/refresh").json()
+    second = client.get("/api/refresh").json()
+    release.set()
+    assert first["status"] == "started"
+    assert second == {"job_id": first["job_id"], "status": "already_running"}
+    assert main._refresh_lock.acquire(timeout=5)
+    main._refresh_lock.release()
+    assert runs == [1]
+    assert main.app.state.running_refresh is False
+
+
+def test_scheduled_refresh_skips_while_manual_refresh_runs(monkeypatch, client_env):
+    runs = []
+    monkeypatch.setattr(main, "_refresh_body", lambda: runs.append(1))
+    main._claim_refresh()
+    try:
+        main.refresh_all_data()  # what APScheduler calls at 18:30
+    finally:
+        main._release_refresh()
+    assert runs == []
+    main.refresh_all_data()
+    assert runs == [1]
+
+
+def test_skipped_same_day_refresh_frees_the_slot(monkeypatch, client_env):
+    client, session = client_env
+    monkeypatch.setattr(main, "_refresh_body", lambda: None)
+    session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow()))
+    session.commit()
+    assert client.get("/api/refresh").json()["status"] == "already_refreshed_today"
+    assert main._refresh_lock.locked() is False
 
 
 def test_manual_refresh_starts_job(monkeypatch, client_env):
     client, _ = client_env
-    monkeypatch.setattr(main, "refresh_all_data", lambda: None)
+    monkeypatch.setattr(main, "_refresh_body", lambda: None)
 
     resp = client.get("/api/refresh")
     assert resp.status_code == 200
@@ -344,7 +392,7 @@ def test_profile_unknown_ticker_404(client_env):
 def test_manual_refresh_skipped_when_refreshed_today(monkeypatch, client_env):
     client, session = client_env
     started = []
-    monkeypatch.setattr(main, "refresh_all_data", lambda: started.append(1))
+    monkeypatch.setattr(main, "_refresh_body", lambda: started.append(1))
     session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow()))
     session.commit()
     resp = client.get("/api/refresh")
@@ -355,7 +403,7 @@ def test_manual_refresh_skipped_when_refreshed_today(monkeypatch, client_env):
 
 def test_manual_refresh_runs_when_last_refresh_was_before_today(monkeypatch, client_env):
     client, session = client_env
-    monkeypatch.setattr(main, "refresh_all_data", lambda: None)
+    monkeypatch.setattr(main, "_refresh_body", lambda: None)
     session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow() - timedelta(days=2)))
     session.commit()
     assert client.get("/api/refresh").json()["status"] == "started"
@@ -363,7 +411,7 @@ def test_manual_refresh_runs_when_last_refresh_was_before_today(monkeypatch, cli
 
 def test_manual_refresh_force_overrides_same_day_skip(monkeypatch, client_env):
     client, session = client_env
-    monkeypatch.setattr(main, "refresh_all_data", lambda: None)
+    monkeypatch.setattr(main, "_refresh_body", lambda: None)
     session.add(_make_analysis("AAL.L", "BUY", run_date=datetime.utcnow()))
     session.commit()
     assert client.get("/api/refresh", params={"force": "true"}).json()["status"] == "started"
