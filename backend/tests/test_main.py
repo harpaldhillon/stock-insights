@@ -382,3 +382,23 @@ def test_status_last_updated_falls_back_to_database(client_env):
     session.add(_make_analysis("AAL.L", "BUY", run_date=run))
     session.commit()
     assert client.get("/api/status").json()["last_updated"] == run.isoformat()
+
+
+# ---- CORS -----------------------------------------------------------
+
+def test_cors_allows_frontend_origin(client_env):
+    client, _ = client_env
+    resp = client.get("/api/status", headers={"Origin": "http://localhost:3000"})
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+    assert "access-control-allow-credentials" not in resp.headers
+
+
+def test_cors_rejects_other_origins(client_env):
+    client, _ = client_env
+    resp = client.get("/api/status", headers={"Origin": "http://evil.example"})
+    assert "access-control-allow-origin" not in resp.headers
+    preflight = client.options(
+        "/api/refresh",
+        headers={"Origin": "http://evil.example", "Access-Control-Request-Method": "GET"},
+    )
+    assert "access-control-allow-origin" not in preflight.headers

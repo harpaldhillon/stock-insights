@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -28,11 +29,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("ftse-analyser")
 
 app = FastAPI(title="Stock Insight", version="1.0")
+# Only the frontend may call the API from a browser. "*" with credentials made
+# Starlette echo back any Origin, so any website could read API responses.
+# Override with a comma-separated FRONTEND_ORIGINS if the frontend moves.
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
