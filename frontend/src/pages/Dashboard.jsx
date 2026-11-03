@@ -36,6 +36,8 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
   const navigate = useNavigate()
   const { filters, search, summary, fetchedKey, pages, expanded } = state
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [retryTick, setRetryTick] = useState(0)
 
   const update = (patch) =>
     setState((s) => ({ ...s, ...(typeof patch === 'function' ? patch(s) : patch) }))
@@ -50,19 +52,26 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
   const summaryKey = `${filters.index}|${filters.sort}|${refreshTick}`
   useEffect(() => {
     if (summary && fetchedKey === summaryKey) return
-    fetchSummary(summaryKey)
-  }, [summaryKey])
+    // Abort the previous request when the key changes: otherwise a slow ALL
+    // response arriving after a fast FTSE100 one would be shown under FTSE100.
+    const controller = new AbortController()
+    fetchSummary(summaryKey, controller.signal)
+    return () => controller.abort()
+  }, [summaryKey, retryTick])
 
-  const fetchSummary = async (key) => {
+  const fetchSummary = async (key, signal) => {
     setLoading(true)
+    setLoadError(false)
     try {
       const params = { index: filters.index, sort: filters.sort }
-      const response = await api.get('/api/summary', { params })
+      const response = await api.get('/api/summary', { params, signal })
       update({ summary: response.data, fetchedKey: key })
     } catch (error) {
+      if (signal.aborted) return // superseded by a newer request
       console.error(error)
+      setLoadError(true)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }
 
@@ -245,7 +254,20 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
       </div>
 
       {/* Signal columns */}
-      {loading || !summary ? (
+      {loadError ? (
+        <div role="alert" className="flex items-center justify-center rounded-xl border border-rose-200 bg-white py-16 shadow-sm dark:border-rose-900/50 dark:bg-slate-900">
+          <div className="text-center">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Couldn’t load stock data</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">The backend didn’t respond. Check it’s running, then try again.</p>
+            <button
+              onClick={() => setRetryTick((t) => t + 1)}
+              className="mt-4 rounded-full bg-sky-500 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-sky-600"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : loading || !summary || fetchedKey !== summaryKey ? (
         <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white py-16 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-center">
             <svg className="mx-auto animate-spin text-sky-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
