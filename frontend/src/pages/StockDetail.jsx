@@ -60,6 +60,14 @@ const BackIcon = () => (
 const panelClass = 'rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900'
 const sectionTitle = 'mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300'
 
+// Badge for a momentum reading, or null when the inputs are missing. Plain
+// comparisons are unsafe here: in JS `null <= 30` and `null >= 0` are true,
+// so a stock without enough history used to get a green BUY badge.
+const has = (...values) => values.every((v) => v != null && !Number.isNaN(v))
+const rsiSignal = (rsi) => (!has(rsi) ? null : rsi >= 70 ? 'SELL' : rsi <= 30 ? 'BUY' : 'HOLD')
+const macdSignal = (line, signal) => (!has(line, signal) ? null : line > signal ? 'BUY' : 'SELL')
+const histSignal = (hist) => (!has(hist) ? null : hist >= 0 ? 'BUY' : 'SELL')
+
 function MomentumRow({ label, value, signal }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
@@ -67,7 +75,11 @@ function MomentumRow({ label, value, signal }) {
         <p className="text-xs text-slate-400 dark:text-slate-500">{label}</p>
         <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900 dark:text-white">{value ?? '–'}</p>
       </div>
-      <SignalBadge signal={signal} />
+      {signal ? (
+        <SignalBadge signal={signal} />
+      ) : (
+        <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">No data</span>
+      )}
     </div>
   )
 }
@@ -165,17 +177,17 @@ function StockDetail() {
             <MomentumRow
               label="RSI (14)"
               value={stock.analysis.rsi14?.toFixed(1)}
-              signal={stock.analysis.rsi14 >= 70 ? 'SELL' : stock.analysis.rsi14 <= 30 ? 'BUY' : 'HOLD'}
+              signal={rsiSignal(stock.analysis.rsi14)}
             />
             <MomentumRow
               label="MACD Line"
               value={stock.analysis.macd_line}
-              signal={stock.analysis.macd_line > stock.analysis.macd_signal ? 'BUY' : 'SELL'}
+              signal={macdSignal(stock.analysis.macd_line, stock.analysis.macd_signal)}
             />
             <MomentumRow
               label="MACD Histogram"
               value={stock.analysis.macd_hist}
-              signal={stock.analysis.macd_hist >= 0 ? 'BUY' : 'SELL'}
+              signal={histSignal(stock.analysis.macd_hist)}
             />
           </div>
         </div>
