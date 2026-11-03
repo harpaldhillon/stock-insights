@@ -531,3 +531,11 @@ def test_run_full_analysis_recovers_after_a_failing_ticker(db_session, sample_pr
     success, total = run_full_analysis(db_session, ["ABF.L", "AAL.L"])
     assert (success, total) == (1, 2)
     assert _tickers_with_analysis(db_session) == ["AAL.L"]
+
+
+def test_every_ticker_has_a_known_quote_currency():
+    from tickers import ALL_TICKERS
+    assert {t["currency"] for t in ALL_TICKERS} <= {"GBp", "GBP", "USD", "EUR"}
+    assert get_ticker_metadata("SHEL.L")["currency"] == "GBp"
+    assert get_ticker_metadata("IHG.L")["currency"] == "USD"
+    assert get_ticker_metadata("AAPL")["currency"] == "USD"

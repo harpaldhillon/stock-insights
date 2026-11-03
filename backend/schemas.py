@@ -7,6 +7,7 @@ class TickerMeta(BaseModel):
     name: str
     sector: str
     index: str
+    currency: str = "GBp"  # GBp (pence), GBP, USD or EUR
 
 
 class AnalysisBase(BaseModel):

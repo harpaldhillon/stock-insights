@@ -224,6 +224,7 @@ def get_summary(
             "name": meta["name"],
             "sector": meta["sector"],
             "index": meta["index"],
+            "currency": meta["currency"],
             "signal": row.signal,
             "conviction": row.conviction,
             "score": row.score,

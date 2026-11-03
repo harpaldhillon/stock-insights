@@ -120,6 +120,9 @@ function StockDetail() {
     )
   }
 
+  // Every price on this page, in the listing's quote currency (pence, £, $ or €).
+  const price = (v) => formatPrice(v, stock.company.ticker, { currency: stock.company.currency })
+
   return (
     <div className="space-y-5">
       {/* Stock hero */}
@@ -147,7 +150,7 @@ function StockDetail() {
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 dark:border-slate-700 dark:bg-slate-950/60">
               <p className="text-xs text-slate-400 dark:text-slate-500">Current price</p>
               <p className="font-mono text-xl font-semibold text-slate-900 dark:text-white">
-                {formatPrice(latestPrice?.close, stock.company.ticker)}
+                {price(latestPrice?.close)}
               </p>
             </div>
             <SignalBadge signal={stock.analysis.signal} conviction={stock.analysis.conviction} />
@@ -158,9 +161,9 @@ function StockDetail() {
 
       {/* Moving averages */}
       <section className="grid gap-4 xl:grid-cols-3">
-        <MetricCard title="EMA 20" value={formatPrice(stock.analysis.ema20, stock.company.ticker)} />
-        <MetricCard title="SMA 50" value={formatPrice(stock.analysis.sma50, stock.company.ticker)} />
-        <MetricCard title="SMA 200" value={formatPrice(stock.analysis.sma200, stock.company.ticker)} />
+        <MetricCard title="EMA 20" value={price(stock.analysis.ema20)} />
+        <MetricCard title="SMA 50" value={price(stock.analysis.sma50)} />
+        <MetricCard title="SMA 200" value={price(stock.analysis.sma200)} />
       </section>
 
       {/* Price chart */}
@@ -233,7 +236,7 @@ function StockDetail() {
       <section className="grid gap-4 xl:grid-cols-4">
         <MetricCard
           title="52W High"
-          value={formatPrice(stock.analysis.week52_high, stock.company.ticker)}
+          value={price(stock.analysis.week52_high)}
           subtitle={
             <>
               {high52 && (
@@ -245,18 +248,18 @@ function StockDetail() {
             </>
           }
         />
-        <MetricCard title="52W Low"  value={formatPrice(stock.analysis.week52_low,  stock.company.ticker)} subtitle="Support" />
+        <MetricCard title="52W Low"  value={price(stock.analysis.week52_low)} subtitle="Support" />
         <MetricCard title="ATR (14)" value={stock.analysis.atr14?.toFixed(2) ?? '–'}                       subtitle="Volatility" />
-        <MetricCard title="BB Upper" value={formatPrice(stock.analysis.bb_upper,     stock.company.ticker)} subtitle="Bollinger band" />
+        <MetricCard title="BB Upper" value={price(stock.analysis.bb_upper)} subtitle="Bollinger band" />
       </section>
 
       {/* Risk / Reward */}
       <div className={panelClass}>
         <h3 className={sectionTitle}>Risk / Reward</h3>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard title="Entry Zone" value={`${formatPrice(stock.analysis.entry_zone_low, stock.company.ticker)} → ${formatPrice(stock.analysis.entry_zone_high, stock.company.ticker)}`} />
-          <MetricCard title="Stop Loss"  value={formatPrice(stock.analysis.stop_loss,    stock.company.ticker)} />
-          <MetricCard title="Target"     value={formatPrice(stock.analysis.target_price,  stock.company.ticker)} />
+          <MetricCard title="Entry Zone" value={`${price(stock.analysis.entry_zone_low)} → ${price(stock.analysis.entry_zone_high)}`} />
+          <MetricCard title="Stop Loss"  value={price(stock.analysis.stop_loss)} />
+          <MetricCard title="Target"     value={price(stock.analysis.target_price)} />
           <MetricCard title="R:R Ratio"  value={stock.analysis.rr_ratio?.toFixed(2) ?? '–'} />
         </div>
       </div>
@@ -268,7 +271,7 @@ function StockDetail() {
       <StockSummary
         stock={stock}
         close={latestPrice?.close}
-        fmt={(v) => formatPrice(v, stock.company.ticker)}
+        fmt={price}
         consensus={consensus}
       />
     </div>

@@ -484,3 +484,16 @@ def test_refresh_analyses_only_fetched_tickers(monkeypatch, client_env):
     main.refresh_all_data()
     assert analysed == [["AAL.L"]]
     assert main.app.state.last_updated is not None
+
+
+def test_summary_and_detail_include_quote_currency(client_env):
+    client, session = client_env
+    session.add_all([
+        _make_analysis("SHEL.L", "BUY", score=5.0),  # London, pence
+        _make_analysis("CPG.L", "BUY", score=4.0),   # London line quoted in USD
+        _make_analysis("NVDA", "BUY", score=6.0),    # NASDAQ
+    ])
+    session.commit()
+    rows = {r["ticker"]: r["currency"] for r in client.get("/api/summary").json()["BUY"]}
+    assert rows == {"SHEL.L": "GBp", "CPG.L": "USD", "NVDA": "USD"}
+    assert client.get("/api/stock/CPG.L").json()["company"]["currency"] == "USD"

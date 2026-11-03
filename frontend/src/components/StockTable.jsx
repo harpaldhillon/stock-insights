@@ -61,7 +61,7 @@ function StockTable({ rows, onRowClick, pageSize = PAGE_SIZE, size = 'md', page:
                   <HighBadge highs={item.notes?.highs} compact={size !== 'lg'} />{item.name}
                 </td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">
-                  {item.current_price != null ? formatPrice(item.current_price, item.ticker, { decimals: 2 }) : '—'}
+                  {item.current_price != null ? formatPrice(item.current_price, item.ticker, { decimals: 2, currency: item.currency }) : '—'}
                 </td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right font-mono text-slate-600 dark:text-slate-300">{item.score.toFixed(2)}</td>
                 <td className="whitespace-nowrap px-1.5 py-2.5 text-right text-slate-500 dark:text-slate-400">{item.conviction}</td>

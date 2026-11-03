@@ -18,7 +18,7 @@ FTSE_TICKERS = [
     {"ticker": "BRBY.L",  "name": "Burberry Group PLC",                    "sector": "Consumer Cyclical",        "index": "FTSE100"},
     {"ticker": "BT-A.L",  "name": "BT Group PLC",                          "sector": "Communication Services",   "index": "FTSE100"},
     {"ticker": "CCH.L",   "name": "Coca-Cola HBC AG",                      "sector": "Consumer Defensive",       "index": "FTSE100"},
-    {"ticker": "CPG.L",   "name": "Compass Group PLC",                     "sector": "Consumer Defensive",       "index": "FTSE100"},
+    {"ticker": "CPG.L",   "name": "Compass Group PLC",                     "sector": "Consumer Defensive",       "index": "FTSE100", "currency": "USD"},
     {"ticker": "CRDA.L",  "name": "Croda International PLC",               "sector": "Basic Materials",                "index": "FTSE100"},
     {"ticker": "DGE.L",   "name": "Diageo PLC",                            "sector": "Consumer Defensive",       "index": "FTSE100"},
     {"ticker": "DPLM.L",  "name": "Diploma PLC",                           "sector": "Industrials",              "index": "FTSE100"},
@@ -35,7 +35,7 @@ FTSE_TICKERS = [
     {"ticker": "HWDN.L",  "name": "Howden Joinery Group PLC",              "sector": "Industrials",              "index": "FTSE100"},
     {"ticker": "IAG.L",   "name": "International Consolidated Airlines",   "sector": "Consumer Cyclical",        "index": "FTSE100"},
     {"ticker": "ICG.L",   "name": "Intermediate Capital Group PLC",        "sector": "Financials",               "index": "FTSE100"},
-    {"ticker": "IHG.L",   "name": "InterContinental Hotels Group PLC",     "sector": "Consumer Cyclical",        "index": "FTSE100"},
+    {"ticker": "IHG.L",   "name": "InterContinental Hotels Group PLC",     "sector": "Consumer Cyclical",        "index": "FTSE100", "currency": "USD"},
     {"ticker": "III.L",   "name": "3i Group PLC",                          "sector": "Financials",               "index": "FTSE100"},
     {"ticker": "IMB.L",   "name": "Imperial Brands PLC",                   "sector": "Consumer Defensive",       "index": "FTSE100"},
     {"ticker": "INF.L",   "name": "Informa PLC",                           "sector": "Communication Services",   "index": "FTSE100"},
@@ -106,14 +106,14 @@ FTSE_TICKERS = [
     {"ticker": "BGFD.L", "name": "Baillie Gifford Japan Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "USA.L", "name": "Baillie Gifford US Growth Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BBY.L", "name": "Balfour Beatty", "sector": "Industrials", "index": "FTSE250"},
-    {"ticker": "BCG.L", "name": "Baltic Classifieds", "sector": "Consumer Cyclical", "index": "FTSE250"},
+    {"ticker": "BCG.L", "name": "Baltic Classifieds", "sector": "Consumer Cyclical", "index": "FTSE250", "currency": "EUR"},
     {"ticker": "BNKR.L", "name": "Bankers Investment Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BAG.L", "name": "A.G. Barr", "sector": "Consumer Cyclical", "index": "FTSE250"},
     {"ticker": "AJB.L", "name": "AJ Bell", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BWY.L", "name": "Bellway", "sector": "Consumer Cyclical", "index": "FTSE250"},
     {"ticker": "BHMG.L", "name": "BH Macro", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BYG.L", "name": "Big Yellow Group", "sector": "Real Estate", "index": "FTSE250"},
-    {"ticker": "BPCR.L", "name": "Biopharma Credit", "sector": "Financials", "index": "FTSE250"},
+    {"ticker": "BPCR.L", "name": "Biopharma Credit", "sector": "Financials", "index": "FTSE250", "currency": "USD"},
     {"ticker": "BRGE.L", "name": "BlackRock Greater Europe Investment Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BRSC.L", "name": "BlackRock Smaller Companies Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "BRWM.L", "name": "BlackRock World Mining Trust", "sector": "Financials", "index": "FTSE250"},
@@ -250,7 +250,7 @@ FTSE_TICKERS = [
     {"ticker": "PINT.L", "name": "Pantheon Infrastructure", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "PIN.L", "name": "Pantheon International", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "PAG.L", "name": "Paragon Banking Group", "sector": "Financials", "index": "FTSE250"},
-    {"ticker": "PEY.L", "name": "Partners Group Private Equity", "sector": "Financials", "index": "FTSE250"},
+    {"ticker": "PEY.L", "name": "Partners Group Private Equity", "sector": "Financials", "index": "FTSE250", "currency": "EUR"},
     {"ticker": "PPET.L", "name": "Patria Private Equity Trust", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "PNN.L", "name": "Pennon Group", "sector": "Utilities", "index": "FTSE250"},
     {"ticker": "PNL.L", "name": "Personal Assets Trust", "sector": "Financials", "index": "FTSE250"},
@@ -272,12 +272,12 @@ FTSE_TICKERS = [
     {"ticker": "RHIM.L", "name": "RHI Magnesita", "sector": "Industrials", "index": "FTSE250"},
     {"ticker": "RCP.L", "name": "RIT Capital Partners", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "ROR.L", "name": "Rotork", "sector": "Industrials", "index": "FTSE250"},
-    {"ticker": "RTW.L", "name": "RTW Biotech Opportunities", "sector": "Financials", "index": "FTSE250"},
+    {"ticker": "RTW.L", "name": "RTW Biotech Opportunities", "sector": "Financials", "index": "FTSE250", "currency": "USD"},
     {"ticker": "RICA.L", "name": "Ruffer Investment Company", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "SAFE.L", "name": "Safestore", "sector": "Real Estate", "index": "FTSE250"},
     {"ticker": "SAGA.L", "name": "Saga", "sector": "Consumer Cyclical", "index": "FTSE250"},
     {"ticker": "SVS.L", "name": "Savills", "sector": "Real Estate", "index": "FTSE250"},
-    {"ticker": "MNTN.L", "name": "Schiehallion Fund", "sector": "Financials", "index": "FTSE250"},
+    {"ticker": "MNTN.L", "name": "Schiehallion Fund", "sector": "Financials", "index": "FTSE250", "currency": "USD"},
     {"ticker": "ATR.L", "name": "Schroder Asian Total Return Investment Company", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "SDP.L", "name": "Schroder AsiaPacific Fund", "sector": "Financials", "index": "FTSE250"},
     {"ticker": "SOI.L", "name": "Schroder Oriental Income Fund", "sector": "Financials", "index": "FTSE250"},
@@ -400,7 +400,7 @@ FTSE_TICKERS = [
     {"ticker": "KMR.L", "name": "Kenmare Resources", "sector": "Basic Materials", "index": "FTSE SmallCap"},
     {"ticker": "LIO.L", "name": "Liontrust Asset Management", "sector": "Financials", "index": "FTSE SmallCap"},
     {"ticker": "LSL.L", "name": "LSL Property Services", "sector": "Real Estate", "index": "FTSE SmallCap"},
-    {"ticker": "LTI.L", "name": "Lindsell Train Investment Trust", "sector": "Financials", "index": "FTSE SmallCap"},
+    {"ticker": "LTI.L", "name": "Lindsell Train Investment Trust", "sector": "Financials", "index": "FTSE SmallCap", "currency": "GBP"},
     {"ticker": "LUCE.L", "name": "Luceco", "sector": "Industrials", "index": "FTSE SmallCap"},
     {"ticker": "LWI.L", "name": "Lowland Investment Company", "sector": "Financials", "index": "FTSE SmallCap"},
     {"ticker": "MACF.L", "name": "Macfarlane Group", "sector": "Industrials", "index": "FTSE SmallCap"},
@@ -594,6 +594,12 @@ ALL_TICKERS = FTSE_TICKERS + NASDAQ100_TICKERS
 # FTSE100 and FTSE250) — TICKERS_BY_TICKER uses setdefault() so it keeps the
 # *first* matching entry, same as the linear-scan `next(...)` lookup it
 # replaces, rather than silently flipping to "last one wins".
+# Quote currency for price formatting. London listings are quoted in pence
+# (GBp) and NASDAQ in US dollars, except the entries above with an explicit
+# "currency" (some London lines trade in USD, EUR or whole pounds).
+for _item in ALL_TICKERS:
+    _item.setdefault("currency", "GBp" if _item["ticker"].endswith(".L") else "USD")
+
 TICKERS_BY_TICKER: dict[str, dict] = {}
 for _item in ALL_TICKERS:
     TICKERS_BY_TICKER.setdefault(_item["ticker"], _item)
