@@ -195,7 +195,7 @@ function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <Routes>
-          <Route path="/" element={<Dashboard status={status} refreshTick={refreshTick} state={dashboardState} setState={setDashboardState} />} />
+          <Route path="/" element={<Dashboard refreshTick={refreshTick} state={dashboardState} setState={setDashboardState} />} />
           <Route path="/stock/:ticker" element={<StockDetail />} />
         </Routes>
       </main>

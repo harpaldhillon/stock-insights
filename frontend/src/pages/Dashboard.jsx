@@ -32,7 +32,7 @@ export const INITIAL_DASHBOARD_STATE = {
   expanded: null,     // 'BUY' | 'HOLD' | 'SELL' while a panel is full screen
 }
 
-function Dashboard({ status, refreshTick = 0, state, setState }) {
+function Dashboard({ refreshTick = 0, state, setState }) {
   const navigate = useNavigate()
   const { filters, search, summary, fetchedKey, pages, expanded } = state
   const [loading, setLoading] = useState(false)
@@ -118,17 +118,21 @@ function Dashboard({ status, refreshTick = 0, state, setState }) {
     return [...sectorFilteredSummary.BUY, ...sectorFilteredSummary.HOLD, ...sectorFilteredSummary.SELL]
   }, [sectorFilteredSummary])
 
+  // Shares of the current selection (index + sector + highs), so Buy/Hold/Sell
+  // add up to ~100%. Dividing by status.total_stocks (every tracked stock, all
+  // indexes) made FTSE100 show e.g. 8% / 6% / 2%.
   const stats = useMemo(() => {
-    if (!status || !sectorFilteredSummary) return null
-    const total = status.total_stocks || 1
-    const buyPct  = ((sectorFilteredSummary.BUY.length  / total) * 100).toFixed(0)
-    const holdPct = ((sectorFilteredSummary.HOLD.length / total) * 100).toFixed(0)
-    const sellPct = ((sectorFilteredSummary.SELL.length / total) * 100).toFixed(0)
+    if (!sectorFilteredSummary) return null
+    const total = sectorFilteredItems.length
+    const pct = (n) => (total ? ((n / total) * 100).toFixed(0) : '0')
+    const buyPct  = pct(sectorFilteredSummary.BUY.length)
+    const holdPct = pct(sectorFilteredSummary.HOLD.length)
+    const sellPct = pct(sectorFilteredSummary.SELL.length)
     const avgScore = sectorFilteredItems.length
       ? (sectorFilteredItems.reduce((sum, item) => sum + item.score, 0) / sectorFilteredItems.length).toFixed(2)
       : '0.00'
     return { total, buyPct, holdPct, sellPct, avgScore }
-  }, [status, sectorFilteredSummary, sectorFilteredItems])
+  }, [sectorFilteredSummary, sectorFilteredItems])
 
   const filteredSummary = useMemo(() => {
     if (!sectorFilteredSummary) return null
