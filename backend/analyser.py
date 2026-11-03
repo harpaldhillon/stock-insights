@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import pandas_ta as ta
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import Analysis, Price
@@ -302,6 +303,7 @@ def analyze_ticker(db: Session, ticker: str) -> bool:
     price_rows = db.query(Price).filter(Price.ticker == ticker).order_by(Price.date).all()
     if not price_rows:
         logger.warning("No price data for %s", ticker)
+        _drop_analysis(db, ticker)
         return False
     df = pd.DataFrame([{
         "date": p.date,
@@ -318,6 +320,7 @@ def analyze_ticker(db: Session, ticker: str) -> bool:
             "Insufficient price history for %s (%d rows) to compute all indicators; skipping",
             ticker, len(price_rows),
         )
+        _drop_analysis(db, ticker)
         return False
     score, signal, conviction = compute_score(latest, indicator_df)
     entry_pivot = max(latest["ema20"], latest["sma50"])
@@ -380,8 +383,50 @@ def run_full_analysis(db: Session, tickers: list[str] | None = None) -> tuple[in
                 success += 1
         except Exception as err:
             logger.exception("Analysis failed for %s: %s", ticker, err)
-            continue
+            # Reset the session, or every later ticker fails with
+            # PendingRollbackError; then drop the old signal so it can't linger.
+            db.rollback()
+            try:
+                _drop_analysis(db, ticker)
+            except Exception:
+                db.rollback()
+                logger.exception("Could not remove old analysis for %s", ticker)
     return success, total
+
+
+def _drop_analysis(db: Session, ticker: str) -> None:
+    """Remove a ticker's previous analysis when it can't be re-analysed, so an
+    old BUY/SELL doesn't stay on the dashboard indefinitely."""
+    if db.query(Analysis).filter(Analysis.ticker == ticker).delete():
+        db.commit()
+
+
+# A stock whose newest price is this far behind the newest price in the
+# database has stopped trading (delisted, taken over) or stopped updating.
+# 10 calendar days leaves room for long holiday weekends.
+STALE_PRICE_DAYS = 10
+
+
+def prune_stale_analyses(db: Session) -> list[str]:
+    """Delete signals that no longer reflect current prices: tickers removed
+    from the ticker list, and tickers whose latest price is more than
+    STALE_PRICE_DAYS behind the market. Judged by price date, not by whether
+    the download "worked": Yahoo still returns the old history for many
+    delisted stocks, which would otherwise be re-scored and stamped as new."""
+    latest = dict(db.query(Price.ticker, func.max(Price.date)).group_by(Price.ticker).all())
+    newest = max(latest.values(), default=None)
+    cutoff = newest - timedelta(days=STALE_PRICE_DAYS) if newest else None
+    stale = sorted(
+        ticker for (ticker,) in db.query(Analysis.ticker).distinct()
+        if ticker not in TICKERS_BY_TICKER
+        or latest.get(ticker) is None
+        or (cutoff is not None and latest[ticker] < cutoff)
+    )
+    if stale:
+        db.query(Analysis).filter(Analysis.ticker.in_(stale)).delete(synchronize_session=False)
+        db.commit()
+        logger.info("Removed %d stale analyses: %s", len(stale), ", ".join(stale))
+    return stale
 
 
 # ---------------------------------------------------------------------------

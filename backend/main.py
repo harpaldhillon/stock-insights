@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from analyser import get_ticker_metadata, run_full_analysis, strategy_rules
+from analyser import get_ticker_metadata, prune_stale_analyses, run_full_analysis, strategy_rules
 from database import Analysis, CompanyProfile, Price, Recommendation, SessionLocal, init_db, get_db
 from fetcher import (
     fetch_company_profile,
@@ -120,6 +120,7 @@ def _refresh_body() -> None:
             # Only re-analyse what was actually downloaded, so run_date (which
             # drives "last updated") means "prices fetched", not "re-scored".
             analysis_success, analysis_total = run_full_analysis(db, fetched)
+            prune_stale_analyses(db)
             app.state.last_updated = datetime.utcnow()
             logger.info(
                 "Data refresh complete: fetched %s/%s tickers, analyzed %s/%s successfully",

@@ -12,6 +12,7 @@ from analyser import (
     compute_score,
     compute_score_breakdown,
     get_ticker_metadata,
+    prune_stale_analyses,
     run_full_analysis,
 )
 from database import Analysis, Price
@@ -464,3 +465,69 @@ def test_run_full_analysis_only_given_tickers(db_session, sample_price_df):
     success, total = run_full_analysis(db_session, ["AAL.L"])
     assert (success, total) == (1, 1)
     assert db_session.query(Analysis).filter(Analysis.ticker == "ABF.L").count() == 0
+
+
+# ---- stale signals ----------------------------------------------------------
+
+def _analysis_row(ticker, signal="BUY"):
+    return Analysis(
+        ticker=ticker, signal=signal, conviction="HIGH", score=5.0,
+        entry_zone_low=1.0, entry_zone_high=2.0, stop_loss=0.5, target_price=3.0, rr_ratio=1.0,
+    )
+
+
+def _tickers_with_analysis(db_session):
+    return sorted(t for (t,) in db_session.query(Analysis.ticker).all())
+
+
+def test_prune_removes_stocks_whose_prices_stopped_updating(db_session):
+    today = date.today()
+    _insert_prices(db_session, "AAL.L", make_price_df(n=30, start_date=today - timedelta(days=29)))  # current
+    _insert_prices(db_session, "ABF.L", make_price_df(n=30, start_date=today - timedelta(days=29 + 60)))  # stopped 60 days ago
+    _insert_prices(db_session, "ADM.L", make_price_df(n=30, start_date=today - timedelta(days=29 + 5)))  # 5 days behind: holiday, keep
+    db_session.add_all([_analysis_row("AAL.L"), _analysis_row("ABF.L"), _analysis_row("ADM.L")])
+    db_session.commit()
+    assert prune_stale_analyses(db_session) == ["ABF.L"]
+    assert _tickers_with_analysis(db_session) == ["AAL.L", "ADM.L"]
+
+
+def test_prune_removes_tickers_no_longer_tracked_or_without_prices(db_session):
+    _insert_prices(db_session, "AAL.L", make_price_df(n=30))
+    db_session.add_all([_analysis_row("AAL.L"), _analysis_row("RKT.L"), _analysis_row("ABF.L")])
+    db_session.commit()
+    # RKT.L was removed from the ticker list; ABF.L has no prices at all.
+    assert prune_stale_analyses(db_session) == ["ABF.L", "RKT.L"]
+    assert _tickers_with_analysis(db_session) == ["AAL.L"]
+
+
+def test_prune_on_empty_database_is_a_no_op(db_session):
+    assert prune_stale_analyses(db_session) == []
+
+
+def test_analyze_ticker_drops_old_signal_when_history_is_insufficient(db_session):
+    db_session.add(_analysis_row("AAL.L"))
+    db_session.commit()
+    _insert_prices(db_session, "AAL.L", make_price_df(n=50))  # too short for SMA200
+    assert analyze_ticker(db_session, "AAL.L") is False
+    assert _tickers_with_analysis(db_session) == []
+
+
+def test_run_full_analysis_recovers_after_a_failing_ticker(db_session, sample_price_df, monkeypatch):
+    import analyser
+    _insert_prices(db_session, "AAL.L", sample_price_df)
+    db_session.add(_analysis_row("ABF.L", signal="SELL"))  # old signal for the ticker that will fail
+    db_session.commit()
+    real = analyser.analyze_ticker
+    def flaky(db, ticker):
+        if ticker == "ABF.L":
+            # A failed flush (NOT NULL violation) leaves the session unusable
+            # until rollback(): without it, AAL.L would fail with PendingRollbackError.
+            bad = _analysis_row("ABF.L")
+            bad.signal = None
+            db.add(bad)
+            db.flush()
+        return real(db, ticker)
+    monkeypatch.setattr(analyser, "analyze_ticker", flaky)
+    success, total = run_full_analysis(db_session, ["ABF.L", "AAL.L"])
+    assert (success, total) == (1, 2)
+    assert _tickers_with_analysis(db_session) == ["AAL.L"]
