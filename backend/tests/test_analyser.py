@@ -410,3 +410,49 @@ def test_nasdaq100_tickers_present_and_tagged():
     assert {"AAPL", "MSFT", "NVDA", "GOOGL", "GOOG"} <= TICKERS_BY_INDEX["NASDAQ100"]
     meta = get_ticker_metadata("NVDA")
     assert meta["index"] == "NASDAQ100" and meta["sector"] == "Technology"
+
+
+# ---- 50/200 SMA cross detection ---------------------------------------------
+
+def _cross_df(sma50, sma200, close=None):
+    n = len(sma50)
+    close = np.asarray(close if close is not None else np.full(n, 100.0), dtype=float)
+    return pd.DataFrame({
+        "date": pd.to_datetime(_dates(n, date(2023, 1, 2))),
+        "close": close, "high": close + 1.0, "low": close - 1.0,
+        "volume": np.full(n, 1_000_000.0), "volume20": np.full(n, 1_000_000.0),
+        "close_diff": pd.Series(close).diff(),
+        "sma50": np.asarray(sma50, dtype=float), "sma200": np.asarray(sma200, dtype=float),
+    })
+
+
+def test_build_notes_no_cross_when_sma50_always_above():
+    # SMA50 above SMA200 from the first day both exist: no cross ever happened.
+    df = _cross_df([np.nan] * 10 + [110.0] * 50, [np.nan] * 10 + [100.0] * 50)
+    notes = build_notes(df)
+    assert notes["golden_cross"] is False
+    assert notes["golden_cross_date"] is None
+    assert notes["pattern"] not in ("Golden Cross", "Death Cross")
+
+
+def test_build_notes_old_cross_recorded_but_not_the_pattern():
+    # Golden cross 60 trading days ago, then today's close breaks the 20-day high.
+    n = 100
+    sma50 = [95.0] * 40 + [105.0] * 60
+    close = [100.0] * (n - 1) + [120.0]
+    notes = build_notes(_cross_df(sma50, [100.0] * n, close))
+    assert notes["golden_cross"] is True
+    assert notes["golden_cross_date"] is not None
+    assert notes["pattern"] == "Breakout"
+
+
+def test_build_notes_real_world_uptrend_not_flagged():
+    n = 400
+    close = np.linspace(100, 200, n)
+    df = pd.DataFrame({
+        "date": pd.date_range("2024-01-01", periods=n, freq="B"),
+        "open": close, "high": close + 1, "low": close - 1, "close": close, "volume": 1e6,
+    })
+    notes = build_notes(calculate_indicators(df))
+    assert notes["golden_cross"] is False
+    assert notes["pattern"] != "Golden Cross"

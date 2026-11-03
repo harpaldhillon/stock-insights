@@ -47,6 +47,9 @@ def calculate_indicators(price_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+CROSS_RECENT_DAYS = 20  # trading days a 50/200 SMA cross stays the stock's headline pattern
+
+
 def build_notes(df: pd.DataFrame) -> dict:
     latest = df.iloc[-1]
     notes = {
@@ -62,14 +65,22 @@ def build_notes(df: pd.DataFrame) -> dict:
         cross_rows = df[~df["sma50"].isna() & ~df["sma200"].isna()].copy()
         cross_rows["cross"] = cross_rows["sma50"] - cross_rows["sma200"]
         cross_rows["cross_sign"] = cross_rows["cross"].apply(lambda x: 1 if x >= 0 else -1)
-        cross_points = cross_rows[cross_rows["cross_sign"] != cross_rows["cross_sign"].shift(1)]
+        # A cross is a sign change versus the previous day. The first row has no
+        # previous day; comparing it to shift(1)'s NaN used to count it as a
+        # cross, so every stock looked like it had crossed when SMA200 warmed up.
+        prev_sign = cross_rows["cross_sign"].shift(1)
+        cross_points = cross_rows[prev_sign.notna() & (cross_rows["cross_sign"] != prev_sign)]
         recent_cross = cross_points.tail(1)
         if not recent_cross.empty:
             cross_date = recent_cross.iloc[-1]["date"]
             is_golden = recent_cross.iloc[-1]["cross"] > 0
             notes["golden_cross"] = bool(is_golden)
             notes["golden_cross_date"] = cross_date.isoformat()
-            notes["pattern"] = "Golden Cross" if is_golden else "Death Cross"
+            # Only a fresh cross is today's pattern; an old one would otherwise
+            # hide the Breakout/Breakdown check below for years.
+            days_since = len(df) - 1 - df.index.get_loc(recent_cross.index[-1])
+            if days_since <= CROSS_RECENT_DAYS:
+                notes["pattern"] = "Golden Cross" if is_golden else "Death Cross"
 
     spike_rows = df[(df["volume"] > df["volume20"] * 1.8) & (df["close_diff"] > 0)].tail(5)
     notes["volume_events"] = [r["date"].isoformat() for _, r in spike_rows.iterrows()]
