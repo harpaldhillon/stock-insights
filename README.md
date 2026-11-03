@@ -43,12 +43,20 @@ npm run dev
 
 The frontend runs on `http://localhost:3000` by default.
 
-## Docker
+## Docker / Podman
 
 ```bash
 cd ftse-analyser
-docker-compose up --build
+podman-compose up --build    # or: docker-compose up --build
 ```
+
+The app is served on localhost only (http://localhost:3000, API on :8000).
+Both containers run as an unprivileged user with UID 1000, not root. The compose
+file sets `userns_mode: keep-id` so rootless podman maps your host UID into the
+containers and they can write the bind-mounted source folders (the SQLite
+database, caches). Docker does not support `keep-id`: remove those two lines
+when using Docker. Rootful Docker maps UID 1000 straight through, so it works
+if your host user is UID 1000; otherwise build with `--build-arg APP_UID=$(id -u)`.
 
 ## Notes
 

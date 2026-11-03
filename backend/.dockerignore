@@ -1,0 +1,12 @@
+# Keep the image to source code: no local venv, data, caches or test output.
+.venv/
+venv/
+*.db
+*.db-journal
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.env.*

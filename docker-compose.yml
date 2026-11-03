@@ -3,6 +3,11 @@ services:
   backend:
     build:
       context: ./backend
+    # The images run as UID 1000, not root. With rootless podman, keep-id maps
+    # your host UID to the same UID inside the container, so it can write the
+    # bind-mounted files you own (database, caches). Docker doesn't support
+    # keep-id: remove these lines there (rootful Docker already maps 1000->1000).
+    userns_mode: keep-id
     ports:
       # Localhost only: the API has no authentication, so don't expose it to the LAN.
       - '127.0.0.1:8000:8000'
@@ -13,6 +18,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    userns_mode: keep-id
     ports:
       - '127.0.0.1:3000:3000'
     volumes:
