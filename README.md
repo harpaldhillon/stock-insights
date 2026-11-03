@@ -74,6 +74,21 @@ The images contain source code only (see the `.dockerignore` files): no
 database, virtualenv or `.env` files. Docker Hub repositories are public
 unless you make them private.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main`/`master`, on pull
+requests, and on demand (Actions > CI > Run workflow):
+
+- **Backend tests:** Python 3.12, `pytest` (yfinance is mocked, so no network
+  or data is needed).
+- **Frontend build:** Node 22, `npm ci`, `npm run build`, and
+  `npm audit --omit=dev --audit-level=high` (fails on high/critical
+  advisories in packages shipped to the browser).
+- **Docker images:** builds both images after the tests pass. On the default
+  branch it also pushes them to Docker Hub as `:latest` and `:<commit sha>`,
+  once the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a
+  Docker Hub access token) are set. Without them, it only builds.
+
 ## Notes
 
 - Uses APScheduler to refresh data daily at 18:30 UK time.

@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same branch or pull request.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # matches backend/Dockerfile
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # yfinance is mocked and the database is in-memory: no network or data needed.
+      - name: Run tests
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Fail on high/critical advisories in packages shipped to the browser.
+      # Dev-only tooling (vite, esbuild) is excluded: it never reaches users.
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  images:
+    name: Docker images
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    env:
+      REGISTRY_NAMESPACE: docker.io/containerssimplified
+      # Images are pushed only from the default branch, and only once both
+      # secrets are set (Settings > Secrets and variables > Actions):
+      #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (a Docker Hub access token)
+      PUSH: ${{ github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch && secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build${{ env.PUSH == 'true' && ' and push' || '' }} ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.REGISTRY_NAMESPACE }}/ftse-analyser-${{ matrix.service }}:latest
+            ${{ env.REGISTRY_NAMESPACE }}/ftse-analyser-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
