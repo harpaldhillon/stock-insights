@@ -58,6 +58,22 @@ database, caches). Docker does not support `keep-id`: remove those two lines
 when using Docker. Rootful Docker maps UID 1000 straight through, so it works
 if your host user is UID 1000; otherwise build with `--build-arg APP_UID=$(id -u)`.
 
+### Publishing images
+
+Builds are tagged `docker.io/containerssimplfied/ftse-analyser-backend:latest`
+and `docker.io/containerssimplfied/ftse-analyser-frontend:latest`. To push them
+to Docker Hub:
+
+```bash
+podman login docker.io
+podman-compose build
+podman-compose push
+```
+
+The images contain source code only (see the `.dockerignore` files): no
+database, virtualenv or `.env` files. Docker Hub repositories are public
+unless you make them private.
+
 ## Notes
 
 - Uses APScheduler to refresh data daily at 18:30 UK time.

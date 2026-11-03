@@ -1,6 +1,8 @@
 version: '3.9'
 services:
   backend:
+    # Name/tag used for builds and `podman-compose push` (Docker Hub).
+    image: docker.io/containerssimplfied/ftse-analyser-backend:latest
     build:
       context: ./backend
     # The images run as UID 1000, not root. With rootless podman, keep-id maps
@@ -16,6 +18,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
   frontend:
+    image: docker.io/containerssimplfied/ftse-analyser-frontend:latest
     build:
       context: ./frontend
     userns_mode: keep-id
