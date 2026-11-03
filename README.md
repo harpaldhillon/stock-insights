@@ -60,8 +60,8 @@ if your host user is UID 1000; otherwise build with `--build-arg APP_UID=$(id -u
 
 ### Publishing images
 
-Builds are tagged `docker.io/containerssimplfied/ftse-analyser-backend:latest`
-and `docker.io/containerssimplfied/ftse-analyser-frontend:latest`. To push them
+Builds are tagged `docker.io/containerssimplified/ftse-analyser-backend:latest`
+and `docker.io/containerssimplified/ftse-analyser-frontend:latest`. To push them
 to Docker Hub:
 
 ```bash
