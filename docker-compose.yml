@@ -4,7 +4,8 @@ services:
     build:
       context: ./backend
     ports:
-      - '8000:8000'
+      # Localhost only: the API has no authentication, so don't expose it to the LAN.
+      - '127.0.0.1:8000:8000'
     volumes:
       - ./backend:/app
     environment:
@@ -13,7 +14,7 @@ services:
     build:
       context: ./frontend
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     volumes:
       - ./frontend:/app
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
