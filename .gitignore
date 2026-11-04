@@ -57,3 +57,7 @@ logs/
 *~
 .DS_Store
 Thumbs.db
+
+# ---------- Claude Code (per-machine settings) ----------
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
