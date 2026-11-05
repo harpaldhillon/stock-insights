@@ -1,0 +1,80 @@
+# Production stack: prebuilt images, no source bind mounts, hardened containers.
+#
+#   docker compose -f docker-compose.prod.yml up -d          # pull & run
+#   docker compose -f docker-compose.prod.yml up -d --build  # build locally
+#
+# The UI and API are served together on one port (nginx proxies /api), bound
+# to localhost by default. The API has no authentication: put a TLS-terminating
+# reverse proxy with auth in front before exposing it beyond this host
+# (set HTTP_BIND=0.0.0.0 only if you have done so).
+name: stock-insights
+
+services:
+  backend:
+    image: docker.io/containerssimplified/ftse-analyser-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+    restart: unless-stopped
+    # Not published: only reachable from the frontend over the compose network.
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: sqlite:////data/ftse_analyser.db
+      TZ: Europe/London
+    volumes:
+      - backend-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    # Also in the Dockerfile; repeated here because podman ignores HEALTHCHECK
+    # in OCI-format images.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    stop_grace_period: 30s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    image: docker.io/containerssimplified/ftse-analyser-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    logging: *logging
+
+volumes:
+  backend-data:

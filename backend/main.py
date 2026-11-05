@@ -163,6 +163,12 @@ async def startup_event():
     thread.start()
 
 
+@app.get("/api/health")
+def health():
+    """Liveness probe for container healthchecks: no database or network work."""
+    return {"status": "ok"}
+
+
 @app.get("/api/status", response_model=StatusResponse)
 def get_status(db: Session = Depends(get_db)):
     total = db.query(func.count(func.distinct(Analysis.ticker))).scalar() or 0

@@ -6,7 +6,13 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
 .coverage
 htmlcov/
 .env
 .env.*
+tests/
+pytest.ini
+requirements-dev.txt
+Dockerfile
+.dockerignore

@@ -45,33 +45,79 @@ The frontend runs on `http://localhost:3000` by default.
 
 ## Docker / Podman
 
+### Development
+
 ```bash
-cd ftse-analyser
-podman-compose up --build    # or: docker-compose up --build
+podman-compose up --build    # or: docker compose up --build
 ```
 
-The app is served on localhost only (http://localhost:3000, API on :8000).
-Both containers run as an unprivileged user with UID 1000, not root. The compose
-file sets `userns_mode: keep-id` so rootless podman maps your host UID into the
-containers and they can write the bind-mounted source folders (the SQLite
-database, caches). Docker does not support `keep-id`: remove those two lines
-when using Docker. Rootful Docker maps UID 1000 straight through, so it works
-if your host user is UID 1000; otherwise build with `--build-arg APP_UID=$(id -u)`.
+Source is bind-mounted with hot reload (uvicorn `--reload`, Vite dev server):
+UI on http://localhost:3000, API on http://localhost:8000, database in
+`backend/ftse_analyser.db`. Both containers run as UID 1000, not root. The
+compose file sets `userns_mode: keep-id` so rootless podman maps your host UID
+into the containers and they can write the bind-mounted folders. Docker does
+not support `keep-id`: remove those lines when using Docker (rootful Docker maps
+UID 1000 straight through; otherwise build with `--build-arg APP_UID=$(id -u)`).
+
+### Production
+
+```bash
+podman-compose -f docker-compose.prod.yml up -d            # pull published images
+podman-compose -f docker-compose.prod.yml up -d --build    # or build locally
+```
+
+The app is served on http://localhost:8080. Settings (environment variables or
+a `.env` file next to the compose file):
+
+| Variable    | Default     | Meaning                                    |
+|-------------|-------------|--------------------------------------------|
+| `IMAGE_TAG` | `latest`    | Image tag to run, e.g. a commit SHA        |
+| `HTTP_PORT` | `8080`      | Host port for the UI and API               |
+| `HTTP_BIND` | `127.0.0.1` | Host interface to listen on                |
+
+What the production images do:
+
+- **Backend** (`python:3.12-slim`, multi-stage): dependencies in a virtualenv
+  copied from a build stage, no build tools or pip cache. Runs uvicorn with a
+  **single worker** (the daily refresh scheduler is in-process; more workers
+  would run duplicate refreshes). The SQLite database and yfinance cache live
+  on the `/data` volume (`backend-data`), set by `DATABASE_URL`. Not published
+  on the host: only nginx can reach it.
+- **Frontend** (multi-stage, `nginx-unprivileged`): the Vite build is served by
+  nginx as UID 101, which also proxies `/api` to the backend, so the browser
+  uses a single origin (no CORS, no hardcoded API host). Adds gzip, long-lived
+  caching for fingerprinted assets, `no-cache` for `index.html`, security
+  headers including a strict Content-Security-Policy, and rate-limits
+  `/api/refresh` to 2 requests per minute per client.
+- **Both:** non-root, read-only root filesystem, all capabilities dropped,
+  `no-new-privileges`, healthchecks (`/api/health`, `/healthz`), memory limits,
+  restart policy and log rotation.
+
+The API has **no authentication**. Before exposing it beyond this host, put a
+TLS-terminating reverse proxy with authentication in front of it.
+
+Back up the database (SQLite's online backup, safe while the app is running):
+
+```bash
+podman exec stock-insights_backend_1 python -c \
+  "import sqlite3; s=sqlite3.connect('/data/ftse_analyser.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d); d.close()"
+podman cp stock-insights_backend_1:/data/backup.db ./backup.db
+```
 
 ### Publishing images
 
-Builds are tagged `docker.io/containerssimplified/ftse-analyser-backend:latest`
-and `docker.io/containerssimplified/ftse-analyser-frontend:latest`. To push them
-to Docker Hub:
+Production images are tagged `docker.io/containerssimplified/ftse-analyser-backend`
+and `docker.io/containerssimplified/ftse-analyser-frontend`. CI pushes them
+(see below); to push by hand:
 
 ```bash
 podman login docker.io
-podman-compose build
-podman-compose push
+podman-compose -f docker-compose.prod.yml build
+podman-compose -f docker-compose.prod.yml push
 ```
 
-The images contain source code only (see the `.dockerignore` files): no
-database, virtualenv or `.env` files. Docker Hub repositories are public
+The images contain the application only (see the `.dockerignore` files): no
+database, tests, virtualenv or `.env` files. Docker Hub repositories are public
 unless you make them private.
 
 ## Continuous integration

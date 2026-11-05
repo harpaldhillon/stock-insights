@@ -1,8 +1,9 @@
-version: '3.9'
+# Development stack: source is bind-mounted, the backend uses the database file
+# in ./backend and the frontend runs the Vite dev server with hot reload.
+# For production use docker-compose.prod.yml.
 services:
   backend:
-    # Name/tag used for builds and `podman-compose push` (Docker Hub).
-    image: docker.io/containerssimplified/ftse-analyser-backend:latest
+    image: localhost/ftse-analyser-backend:dev
     build:
       context: ./backend
     # The images run as UID 1000, not root. With rootless podman, keep-id maps
@@ -15,17 +16,23 @@ services:
       - '127.0.0.1:8000:8000'
     volumes:
       - ./backend:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       - PYTHONUNBUFFERED=1
+      # Keep the database and cache in the bind-mounted source folder in dev.
+      - DATABASE_URL=sqlite:///./ftse_analyser.db
+      - XDG_CACHE_HOME=/app/.cache
   frontend:
-    image: docker.io/containerssimplified/ftse-analyser-frontend:latest
+    image: localhost/ftse-analyser-frontend:dev
     build:
       context: ./frontend
+      target: dev
     userns_mode: keep-id
     ports:
       - '127.0.0.1:3000:3000'
     volumes:
       - ./frontend:/app
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+      # Keep the image's node_modules (Linux binaries) instead of the host's.
+      - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true

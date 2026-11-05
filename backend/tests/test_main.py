@@ -497,3 +497,10 @@ def test_summary_and_detail_include_quote_currency(client_env):
     rows = {r["ticker"]: r["currency"] for r in client.get("/api/summary").json()["BUY"]}
     assert rows == {"SHEL.L": "GBp", "CPG.L": "USD", "NVDA": "USD"}
     assert client.get("/api/stock/CPG.L").json()["company"]["currency"] == "USD"
+
+
+def test_health_returns_ok(client_env):
+    client, _ = client_env
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
