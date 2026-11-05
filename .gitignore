@@ -19,6 +19,7 @@ ENV/
 .coverage
 .coverage.*
 htmlcov/
+.cache/
 .tox/
 .mypy_cache/
 .ruff_cache/

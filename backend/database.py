@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from sqlalchemy import (
     Column,
@@ -14,9 +15,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-SQLITE_URL = "sqlite:///./ftse_analyser.db"
+# Defaults to a file next to the code for local development; the Docker image
+# sets DATABASE_URL to a path on its /data volume.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./ftse_analyser.db")
 
-engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
